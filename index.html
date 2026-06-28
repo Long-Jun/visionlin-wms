@@ -1509,7 +1509,7 @@
             } catch (err) {
                 console.error("Firebase Connection Error", err);
                 updateCloudStatus(false, "資料庫連線失敗");
-                showToast("資料庫初始化連線失敗，請在「設定」中檢查您的金鑰或至 Firebase 啟用 Firestore 資料庫。", "danger");
+                showToast("資料庫初始化連線失敗，請在「設定」中檢查您的金鑰或至 Firebase 啟用 Firestore 資料庫。詳細錯誤：" + err.message, "danger");
             } finally {
                 showLoading(false);
             }
