@@ -989,14 +989,6 @@
                             <input type="text" id="inv-search" class="form-control" placeholder="搜尋料號/品名/儲位..." style="padding-left: 36px;">
                             <i data-lucide="search" style="position: absolute; left: 12px; color: var(--text-muted); width: 16px; height: 16px;"></i>
                         </div>
-                        <select id="inv-filter-status" class="form-control">
-                            <option value="">所有狀態</option>
-                            <option value="正常">正常</option>
-                            <option value="待驗">待驗</option>
-                            <option value="待修">待修</option>
-                            <option value="待報廢">待報廢</option>
-                            <option value="借出">借出</option>
-                        </select>
                         <select id="inv-filter-floor" class="form-control">
                             <option value="">所有樓層</option>
                             <option value="B1">B1</option>
@@ -1004,6 +996,14 @@
                         </select>
                         <select id="inv-filter-loc" class="form-control">
                             <option value="">所有儲位</option>
+                        </select>
+                        <select id="inv-filter-status" class="form-control">
+                            <option value="">所有狀態</option>
+                            <option value="正常">正常</option>
+                            <option value="待驗">待驗</option>
+                            <option value="待修">待修</option>
+                            <option value="待報廢">待報廢</option>
+                            <option value="借出">借出</option>
                         </select>
                     </div>
                     <div class="table-responsive">
@@ -1587,6 +1587,45 @@
                 toast.style.animation = 'toastOut 0.25s ease forwards';
                 setTimeout(() => toast.remove(), 250);
             }, 3000);
+        }
+
+        function syncStatusFilter() {
+            const floorEl = document.getElementById('inv-filter-floor');
+            const locEl = document.getElementById('inv-filter-loc');
+            const statusEl = document.getElementById('inv-filter-status');
+            if (!floorEl || !locEl || !statusEl) return;
+            
+            const selectedFloor = floorEl.value;
+            const selectedLoc = locEl.value;
+            const selectedStatus = statusEl.value;
+            
+            // 找出符合目前選取「樓層」與「儲位」的所有庫存資料
+            let filteredInventory = cache.inventory.filter(inv => inv.quantity > 0);
+            if (selectedLoc) {
+                filteredInventory = filteredInventory.filter(inv => inv.locationId === selectedLoc);
+            } else if (selectedFloor) {
+                filteredInventory = filteredInventory.filter(inv => inv.locationId.split('-')[0] === selectedFloor);
+            }
+            
+            // 取得這些庫存中實際存在的所有「狀態」
+            const activeStatuses = [...new Set(filteredInventory.map(inv => inv.status))];
+            
+            // 重新填入狀態選項
+            let html = '<option value="">所有狀態</option>';
+            const allPossibleStatuses = ["正常", "待驗", "待修", "待報廢", "借出"];
+            allPossibleStatuses.forEach(s => {
+                if (activeStatuses.includes(s)) {
+                    html += `<option value="${s}">${s}</option>`;
+                }
+            });
+            statusEl.innerHTML = html;
+            
+            // 如果先前選的狀態仍在新的可用清單中，保留選取；否則重設為「所有狀態」
+            if (selectedStatus && activeStatuses.includes(selectedStatus)) {
+                statusEl.value = selectedStatus;
+            } else {
+                statusEl.value = "";
+            }
         }
 
         function syncInventoryFilters(triggerSource) {
@@ -2534,10 +2573,12 @@
             document.getElementById('inv-filter-status').addEventListener('change', renderInventory); 
             document.getElementById('inv-filter-floor').addEventListener('change', () => {
                 syncInventoryFilters('floor');
+                syncStatusFilter();
                 renderInventory();
             });
             document.getElementById('inv-filter-loc').addEventListener('change', () => {
                 syncInventoryFilters('loc');
+                syncStatusFilter();
                 renderInventory();
             });
 
