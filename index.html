@@ -803,7 +803,7 @@
                 <i data-lucide="map-pin"></i> 儲位主檔
             </li>
             <li class="nav-item" id="menu-materials">
-                <i data-lucide="box"></i> 物料主檔
+                <i data-lucide="cpu"></i> 機器種類主檔
             </li>
             <li class="nav-item" id="menu-inventory">
                 <i data-lucide="layers"></i> 庫存明細
@@ -949,15 +949,15 @@
                 </div>
             </div>
 
-            <!-- 3. 物料主檔頁面 -->
+            <!-- 3. 機器種類主檔頁頁面 -->
             <div id="materials" class="page">
                 <div class="panel">
                     <div class="btn-group" style="justify-content: space-between; align-items: center; margin-bottom: 0;">
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="text" id="mat-search" class="form-control" placeholder="搜尋唯一編號/品牌/型號..." style="width: 250px; padding-left: 36px;">
+                            <input type="text" id="mat-search" class="form-control" placeholder="搜尋機器種類/品牌/型號..." style="width: 250px; padding-left: 36px;">
                             <i data-lucide="search" style="position: absolute; left: 12px; color: var(--text-muted); width: 16px; height: 16px;"></i>
                         </div>
-                        <button class="btn btn-success" id="btn-add-mat"><i data-lucide="plus"></i> 新增資通訊設備</button>
+                        <button class="btn btn-success" id="btn-add-mat"><i data-lucide="plus"></i> 新增機器種類</button>
                     </div>
                 </div>
                 <div class="panel">
@@ -965,10 +965,11 @@
                         <table id="mat-table">
                             <thead>
                                 <tr>
-                                    <th>物品編號</th>
+                                    <th>機器種類</th>
                                     <th>品牌</th>
                                     <th>型號</th>
                                     <th>規格描述</th>
+                                    <th>預設數量</th>
                                     <th>單位</th>
                                     <th>操作</th>
                                 </tr>
@@ -1009,11 +1010,12 @@
                             <thead>
                                 <tr>
                                     <th>儲位</th>
-                                    <th>物品編號</th>
+                                    <th>物品編號 / 唯一碼</th>
+                                    <th>機器種類</th>
                                     <th>品牌</th>
                                     <th>型號</th>
                                     <th>規格</th>
-                                    <th>雲端庫存數</th>
+                                    <th>庫存數量</th>
                                     <th>單位</th>
                                     <th>狀態</th>
                                     <th>最後異動</th>
@@ -1048,19 +1050,21 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>物品編號 *</span>
-                                    <button type="button" class="btn btn-outline" id="btn-scan-item" style="padding: 2px 8px; font-size: 0.75rem; height: 22px;"><i data-lucide="scan" style="width:12px; height:12px;"></i> 掃描</button>
-                                </label>
-                                <input type="text" id="tx-item" class="form-control" required placeholder="輸入唯一編號後離開自動帶入">
+                                <label>選擇設備型號 *</label>
+                                <select id="tx-model-id" class="form-control" required>
+                                    <option value="">請選擇設備...</option>
+                                </select>
                             </div>
                             <div class="form-group">
-                                <label>品牌/型號 (自動檢索)</label>
-                                <input type="text" id="tx-name" class="form-control" readonly placeholder="自動檢索雲端主檔" style="background-color: rgba(255,255,255,0.02); color: var(--text-muted);">
+                                <label style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>物品編號 / 唯一碼 *</span>
+                                    <button type="button" class="btn btn-outline" id="btn-scan-item" style="padding: 2px 8px; font-size: 0.75rem; height: 22px;"><i data-lucide="scan" style="width:12px; height:12px;"></i> 掃描</button>
+                                </label>
+                                <input type="text" id="tx-asset-id" class="form-control" required placeholder="請掃描或輸入實體設備唯一條碼/序號">
                             </div>
                             <div class="form-group">
                                 <label>交易數量 *</label>
-                                <input type="number" id="tx-qty" class="form-control" required min="0.01" step="0.01" placeholder="輸入數量">
+                                <input type="number" id="tx-qty" class="form-control" required min="0.01" step="0.01" placeholder="輸入數量" value="1">
                             </div>
                         </div>
                         <div class="form-row">
@@ -1348,12 +1352,12 @@
             <div class="modal-body">
                 <form id="form-add-mat">
                     <div class="form-group">
-                        <label>物品編號 * (唯一碼 / 資產條碼)</label>
-                        <input type="text" id="new-mat-id" class="form-control" required placeholder="例如: ASSET-0005">
+                        <label>機器種類 *</label>
+                        <input type="text" id="new-mat-type" class="form-control" required placeholder="例如: 筆記型電腦, 印表機, 伺服器">
                     </div>
                     <div class="form-group">
                         <label>品牌 *</label>
-                        <input type="text" id="new-mat-brand" class="form-control" required placeholder="例如: Apple, ASUS">
+                        <input type="text" id="new-mat-brand" class="form-control" required placeholder="例如: Apple, ASUS, Dell">
                     </div>
                     <div class="form-group">
                         <label>型號 (可選)</label>
@@ -1364,10 +1368,14 @@
                         <input type="text" id="new-mat-spec" class="form-control" placeholder="例如: 16G/512G">
                     </div>
                     <div class="form-group">
+                        <label>預設庫存數量 * (必選)</label>
+                        <input type="number" id="new-mat-qty" class="form-control" required placeholder="例如: 1" value="1" min="1">
+                    </div>
+                    <div class="form-group">
                         <label>計量單位 * (必選)</label>
                         <input type="text" id="new-mat-unit" class="form-control" required placeholder="例如: 台, 個" value="台">
                     </div>
-                    <button type="submit" class="btn btn-success" style="width: 100%; height: 42px; margin-top: 15px;">建立雲端物料</button>
+                    <button type="submit" class="btn btn-success" style="width: 100%; height: 42px; margin-top: 15px;">建立雲端機器種類</button>
                 </form>
             </div>
         </div>
@@ -1450,10 +1458,10 @@
         window.deviceId = deviceId;
 
         const DEFAULT_ITEMS = [
-            { id: 'ASSET-0001', brand: 'Apple', model: 'MacBook Pro 14', spec: 'M3/16G/512G', unit: '台' },
-            { id: 'ASSET-0002', brand: 'ASUS', model: 'ExpertBook B9', spec: 'i7/16G/1T', unit: '台' },
-            { id: 'ASSET-0003', brand: 'Dell', model: 'OptiPlex 7010', spec: 'i5/16G/512G', unit: '台' },
-            { id: 'ASSET-0004', brand: 'Cisco', model: 'Catalyst 9300', spec: '24-Port PoE Switch', unit: '台' }
+            { id: 'MODEL-0001', type: '筆記型電腦', brand: 'Apple', model: 'MacBook Pro 14', spec: 'M3/16G/512G', qty: 10, unit: '台' },
+            { id: 'MODEL-0002', type: '筆記型電腦', brand: 'ASUS', model: 'ExpertBook B9', spec: 'i7/16G/1T', qty: 5, unit: '台' },
+            { id: 'MODEL-0003', type: '桌上型電腦', brand: 'Dell', model: 'OptiPlex 7010', spec: 'i5/16G/512G', qty: 15, unit: '台' },
+            { id: 'MODEL-0004', type: '網路交換器', brand: 'Cisco', model: 'Catalyst 9300', spec: '24-Port PoE Switch', qty: 2, unit: '台' }
         ];
 
         async function init() {
@@ -1480,12 +1488,32 @@
 
                 await syncCache();
 
-                // 檢查是否需要載入初始物料資料
+                // 檢查是否需要載入初始設備型號與庫存資料
                 if (cache.items.length === 0) {
-                    showLoading(true, "建立預設物料主檔...");
-                    for (let item of DEFAULT_ITEMS) { 
-                        await db.collection("items").doc(item.id).set(item); 
-                    }
+                    showLoading(true, "建立預設設備主檔與預設庫存...");
+                    const batch = db.batch();
+                    const defaultLoc = cache.locations.length > 0 ? cache.locations[0].id : "1F-A-01";
+                    
+                    DEFAULT_ITEMS.forEach((item) => {
+                        // 1. 寫入設備主檔
+                        const modelRef = db.collection("items").doc(item.id);
+                        batch.set(modelRef, item);
+                        
+                        // 2. 寫入預設庫存項目
+                        const assetId = `SN-${item.id.split('-')[1]}`;
+                        const invId = `${assetId}_${defaultLoc}_正常`;
+                        const invRef = db.collection("inventory").doc(invId);
+                        batch.set(invRef, {
+                            assetId,
+                            modelId: item.id,
+                            locationId: defaultLoc,
+                            quantity: item.qty,
+                            status: '正常',
+                            lastUpdated: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                        });
+                    });
+                    
+                    await batch.commit();
                     await syncCache();
                 }
 
@@ -1739,6 +1767,16 @@
             syncLocationFilters();
             syncShelfFilters('st');
             syncShelfFilters('lbl');
+
+            // 填入出入庫表單的設備型號選擇器
+            const txModelEl = document.getElementById('tx-model-id');
+            if (txModelEl) {
+                let html = '<option value="">請選擇設備...</option>';
+                cache.items.forEach(item => {
+                    html += `<option value="${item.id}">[${item.type}] ${item.brand} ${item.model || ''} (${item.spec || '無規格'})</option>`;
+                });
+                txModelEl.innerHTML = html;
+            }
         }
 
         function switchPage(pageId, targetEl) {
@@ -2024,15 +2062,16 @@
             let html = '';
             
             cache.items.filter(i => {
-                const searchStr = `${i.id} ${i.brand||''} ${i.model||''} ${i.spec||''}`.toLowerCase();
+                const searchStr = `${i.type||''} ${i.brand||''} ${i.model||''} ${i.spec||''}`.toLowerCase();
                 return searchStr.includes(q);
             }).forEach(i => {
                 html += `
                     <tr>
-                        <td><strong>${i.id}</strong></td>
-                        <td>${i.brand||i.name||'-'}</td>
+                        <td><strong>${i.type||'-'}</strong></td>
+                        <td>${i.brand||'-'}</td>
                         <td>${i.model||'-'}</td>
                         <td>${i.spec||'-'}</td>
+                        <td style="font-weight: 600;">${i.qty||'1'}</td>
                         <td>${i.unit||'台'}</td>
                         <td><button class="btn btn-danger btn-sm" data-id="${i.id}"><i data-lucide="trash-2" style="width:12px; height:12px;"></i> 刪除</button></td>
                     </tr>
@@ -2051,14 +2090,15 @@
             
             cache.inventory.forEach(inv => {
                 if(inv.quantity <= 0) return;
-                const item = cache.items.find(i => i.id === inv.itemId) || {}; 
+                const item = cache.items.find(i => i.id === inv.modelId) || {}; 
                 const locParts = inv.locationId.split('-');
                 
                 if(stat && inv.status !== stat) return; 
                 if(floor && locParts[0] !== floor) return;
                 if(filterLoc && inv.locationId !== filterLoc) return; // 儲位匹配
                 
-                const searchTarget = `${inv.locationId} ${inv.itemId} ${item.brand||''} ${item.model||''} ${item.spec||''}`.toLowerCase();
+                const assetId = inv.assetId || inv.itemId || '-';
+                const searchTarget = `${inv.locationId} ${assetId} ${item.type||''} ${item.brand||''} ${item.model||''} ${item.spec||''}`.toLowerCase();
                 if(q && !searchTarget.includes(q)) return;
                 
                 let badgeClass = 'bg-normal';
@@ -2070,8 +2110,9 @@
                 html += `
                     <tr>
                         <td><strong>${inv.locationId}</strong></td>
-                        <td>${inv.itemId}</td>
-                        <td>${item.brand||item.name||'-'}</td>
+                        <td>${assetId}</td>
+                        <td>${item.type||'-'}</td>
+                        <td>${item.brand||'-'}</td>
                         <td>${item.model||'-'}</td>
                         <td>${item.spec||'-'}</td>
                         <td style="font-weight:bold; font-size:1.05rem; color: var(--success);">${inv.quantity}</td>
@@ -2646,12 +2687,6 @@
                 } 
             });
 
-            // 表單輸入物品編號檢索
-            document.getElementById('tx-item').addEventListener('blur', (e) => { 
-                const item = cache.items.find(i => i.id === e.target.value.trim()); 
-                document.getElementById('tx-name').value = item ? `${item.brand} ${item.model || ''}` : '❌ 未尋獲此物品編號'; 
-            });
-
             // 交易狀態「其他」選擇切換
             document.getElementById('tx-status').addEventListener('change', (e) => {
                 const customInput = document.getElementById('tx-custom-status');
@@ -2836,7 +2871,7 @@
             };
 
             // 相機直連掃描按鈕觸發事件
-            document.getElementById('btn-scan-item').onclick = () => openScanner('tx-item');
+            document.getElementById('btn-scan-item').onclick = () => openScanner('tx-asset-id');
             document.getElementById('btn-scan-loc').onclick = () => openScanner('tx-loc');
             document.getElementById('btn-scan-new-loc').onclick = () => openScanner('tx-new-loc');
             
@@ -2967,32 +3002,51 @@
 
             document.getElementById('form-add-mat').addEventListener('submit', async (e) => {
                 e.preventDefault();
-                let id = document.getElementById('new-mat-id').value.trim();
-                if (!id) {
-                    return showToast("請輸入物品編號 (唯一編碼)！", "danger");
-                }
-                if (cache.items.some(i => i.id === id)) {
-                    return showToast(`物品編號 ${id} 已存在！`, "danger");
-                }
-                
+                const type = document.getElementById('new-mat-type').value.trim();
                 const brand = document.getElementById('new-mat-brand').value.trim();
-                const model = document.getElementById('new-mat-model').value.trim();
+                const modelName = document.getElementById('new-mat-model').value.trim();
                 const spec = document.getElementById('new-mat-spec').value.trim();
+                const qty = Number(document.getElementById('new-mat-qty').value);
                 const unit = document.getElementById('new-mat-unit').value.trim();
 
+                if (!type) return showToast("機器種類為必填欄位！", "danger");
                 if (!brand) return showToast("品牌為必填欄位！", "danger");
                 if (!unit) return showToast("單位為必填欄位！", "danger");
+                if (isNaN(qty) || qty <= 0) return showToast("數量必須大於 0！", "danger");
 
-                showLoading(true, "雲端物料主檔寫入中...");
+                const modelId = `MODEL-${Date.now()}`;
+
+                showLoading(true, "雲端設備主檔寫入中...");
                 try {
-                    await db.collection("items").doc(id).set({ id, brand, model, spec, unit });
-                    showToast(`物品 ${id} - ${brand} 建立成功！`, "success");
+                    const batch = db.batch();
+                    
+                    // 1. 寫入設備型號主檔
+                    const modelRef = db.collection("items").doc(modelId);
+                    batch.set(modelRef, { id: modelId, type, brand, model: modelName, spec, unit, qty });
+                    
+                    // 2. 建立對應的預設庫存項目
+                    const defaultLoc = cache.locations.length > 0 ? cache.locations[0].id : "1F-A-01";
+                    const assetId = `SN-${modelId.split('-')[1]}`;
+                    const invId = `${assetId}_${defaultLoc}_正常`;
+                    const invRef = db.collection("inventory").doc(invId);
+                    
+                    batch.set(invRef, { 
+                        assetId,
+                        modelId,
+                        locationId: defaultLoc,
+                        quantity: qty,
+                        status: '正常',
+                        lastUpdated: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                    });
+
+                    await batch.commit();
+                    showToast(`設備 ${brand} ${modelName || ''} 建立成功，並已放入儲位 ${defaultLoc}！`, "success");
                     document.getElementById('modal-add-material').style.display = 'none';
                     document.getElementById('form-add-mat').reset();
                     await syncCache();
                     renderMaterials();
                 } catch(err) {
-                    showToast("建立物品失敗：" + err.message, "danger");
+                    showToast("建立設備失敗：" + err.message, "danger");
                 } finally {
                     showLoading(false);
                 }
