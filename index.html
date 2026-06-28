@@ -1955,6 +1955,70 @@
             }
         }
 
+        async function runGenerateLocations(mode) {
+            if(!confirm("確認執行雲端批次鋪設儲位？將會跳過已存在的儲位代碼。")) return;
+            showLoading(true, "雲端儲位鋪設中...");
+            const floors = mode === 'ALL' ? ['B1', '1F'] : [mode];
+            const batch = db.batch(); 
+            let counter = 0;
+            
+            floors.forEach(f => {
+                // 1F 的儲位規則：只有 A, B, C, D 且皆為 4 層
+                // B1 的儲位規則：依照 SHELF_CONFIG (A-Q)
+                const activeShelves = (f === '1F')
+                    ? { A: 4, B: 4, C: 4, D: 4 }
+                    : SHELF_CONFIG;
+
+                for(let shelf in activeShelves) {
+                    for(let i=1; i<=activeShelves[shelf]; i++) {
+                        const layerStr = i.toString().padStart(2, '0');
+                        const id = `${f}-${shelf}-${layerStr}`;
+                        if(!cache.locations.some(l => l.id === id)) {
+                            const ref = db.collection("locations").doc(id);
+                            batch.set(ref, { id, floor: f, shelf, layer: layerStr, status: '啟用' }); 
+                            counter++;
+                        }
+                    }
+                }
+            });
+            
+            if(counter > 0) { 
+                await batch.commit(); 
+                await syncCache(); 
+                renderLocations(); 
+                showToast(`雲端儲位佈署成功，共新增 ${counter} 個儲位。`, "success"); 
+            } else { 
+                showToast("所選範圍儲位皆已存在，無須重複建立。", "warning"); 
+            }
+            showLoading(false);
+        }
+
+        function renderLocations() {
+            const initPanel = document.getElementById('panel-loc-initialize');
+            if (initPanel) {
+                initPanel.style.display = cache.locations.length === 0 ? 'block' : 'none';
+            }
+
+            const fFloor = document.getElementById('loc-filter-floor').value; 
+            const fShelf = document.getElementById('loc-filter-shelf').value;
+            let html = '';
+            
+            cache.locations.filter(l => (!fFloor || l.floor === fFloor) && (!fShelf || l.shelf === fShelf)).sort((a,b) => a.id.localeCompare(b.id)).forEach(l => {
+                html += `
+                    <tr>
+                        <td><strong>${l.id}</strong></td>
+                        <td>${l.floor}</td>
+                        <td>${l.shelf} 架</td>
+                        <td>第 ${Number(l.layer)} 層</td>
+                        <td><span class="status-badge bg-normal">${l.status}</span></td>
+                        <td><button class="btn btn-danger btn-sm" data-id="${l.id}"><i data-lucide="trash-2" style="width:12px; height:12px;"></i> 刪除</button></td>
+                    </tr>
+                `;
+            });
+            document.querySelector('#loc-table tbody').innerHTML = html;
+            lucide.createIcons();
+        }
+
         function renderMaterials() {
             const q = document.getElementById('mat-search').value.toLowerCase().trim();
             let html = '';
