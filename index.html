@@ -2618,6 +2618,19 @@
                 syncShelfFilters('lbl');
             });
 
+            // 操作人員姓名跨頁面與手機/電腦模式即時同步
+            const syncUserInputs = (e) => {
+                const val = e.target.value;
+                safeLocalStorage.setItem("visionlin_wms_last_user", val);
+                ['tx-user', 'st-user', 'st-mob-user'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el && el.value !== val) el.value = val;
+                });
+            };
+            document.getElementById('tx-user').addEventListener('input', syncUserInputs);
+            if (document.getElementById('st-user')) document.getElementById('st-user').addEventListener('input', syncUserInputs);
+            if (document.getElementById('st-mob-user')) document.getElementById('st-mob-user').addEventListener('input', syncUserInputs);
+
             // 盤點按鈕與事件
             document.getElementById('btn-load-st').addEventListener('click', generateStocktakeList); 
             document.getElementById('btn-submit-st').addEventListener('click', commitStocktakeFix); 
