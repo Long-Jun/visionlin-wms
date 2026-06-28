@@ -1004,6 +1004,9 @@
                             <option value="B1">B1</option>
                             <option value="1F">1F</option>
                         </select>
+                        <select id="inv-filter-loc" class="form-control">
+                            <option value="">所有儲位</option>
+                        </select>
                     </div>
                     <div class="table-responsive">
                         <table id="inv-table">
@@ -1537,6 +1540,9 @@
             
             const txSnap = await db.collection("transactions").get(); 
             cache.transactions = txSnap.docs.map(d => d.data()).sort((a,b) => b.date.localeCompare(a.date));
+
+            // 💡 雲端同步完成後，隨時更新與重建儲位篩選選單
+            buildDropdowns();
         }
 
         // ==========================================
@@ -1590,9 +1596,17 @@
             for(let s in SHELF_CONFIG) { 
                 html += `<option value="${s}">${s} 架</option>`; 
             }
-            document.getElementById('loc-filter-shelf').innerHTML += html; 
-            document.getElementById('st-shelf').innerHTML += html; 
-            document.getElementById('lbl-shelf').innerHTML += html;
+            document.getElementById('loc-filter-shelf').innerHTML = '<option value="">所有層架</option>' + html; 
+            document.getElementById('st-shelf').innerHTML = '<option value="ALL">所有層架</option>' + html; 
+            document.getElementById('lbl-shelf').innerHTML = '<option value="ALL">所有層架</option>' + html;
+
+            // 💡 動態填入庫存查詢的「儲位」下拉選單
+            let locHtml = '<option value="">所有儲位</option>';
+            cache.locations.sort((a, b) => a.id.localeCompare(b.id)).forEach(l => {
+                locHtml += `<option value="${l.id}">${l.id}</option>`;
+            });
+            const invFilterLoc = document.getElementById('inv-filter-loc');
+            if (invFilterLoc) invFilterLoc.innerHTML = locHtml;
         }
 
         function switchPage(pageId, targetEl) {
@@ -1786,6 +1800,7 @@
             const q = document.getElementById('inv-search').value.toLowerCase(); 
             const stat = document.getElementById('inv-filter-status').value; 
             const floor = document.getElementById('inv-filter-floor').value;
+            const filterLoc = document.getElementById('inv-filter-loc').value; // 儲位篩選
             let html = '';
             
             cache.inventory.forEach(inv => {
@@ -1795,6 +1810,7 @@
                 
                 if(stat && inv.status !== stat) return; 
                 if(floor && locParts[0] !== floor) return;
+                if(filterLoc && inv.locationId !== filterLoc) return; // 儲位匹配
                 
                 const searchTarget = `${inv.locationId} ${inv.itemId} ${item.name||''} ${item.spec||''}`.toLowerCase();
                 if(q && !searchTarget.includes(q)) return;
@@ -2435,6 +2451,7 @@
             document.getElementById('inv-search').addEventListener('keyup', renderInventory); 
             document.getElementById('inv-filter-status').addEventListener('change', renderInventory); 
             document.getElementById('inv-filter-floor').addEventListener('change', renderInventory);
+            document.getElementById('inv-filter-loc').addEventListener('change', renderInventory);
 
             // 盤點按鈕與事件
             document.getElementById('btn-load-st').addEventListener('click', generateStocktakeList); 
