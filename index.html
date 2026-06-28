@@ -917,12 +917,10 @@
                 <div class="panel" id="panel-loc-initialize">
                     <h3><i data-lucide="boxes"></i> 雲端批次初始化儲位</h3>
                     <p style="margin-bottom: 15px; font-size: 0.85rem; color: var(--text-muted);">
-                        自動建立標準層架：A-C(4層)、D-E(5層)、F-H(4層)、I(3層)、J-K(4層)、L(3層)、M-Q(4層)。不會覆蓋現有已存在儲位。
+                        自動建立系統預設儲位配置：B1 樓層為 A-C(4層)、D-E(5層)、F-H(4層)、I(3層)、J-K(4層)、L(3層)、M-Q(4層)；1F 樓層為 A-D(4層)。不會覆蓋現有已存在儲位。
                     </p>
                     <div class="btn-group">
-                        <button class="btn btn-outline" id="btn-gen-b1">產生 B1 儲位</button>
-                        <button class="btn btn-outline" id="btn-gen-1f">產生 1F 儲位</button>
-                        <button class="btn btn-warning" id="btn-gen-all">產生雙樓層所有儲位</button>
+                        <button class="btn btn-warning" id="btn-gen-all"><i data-lucide="plus-circle"></i> 產生預設儲位</button>
                     </div>
                 </div>
                 <div class="panel">
@@ -1768,8 +1766,14 @@
             let counter = 0;
             
             floors.forEach(f => {
-                for(let shelf in SHELF_CONFIG) {
-                    for(let i=1; i<=SHELF_CONFIG[shelf]; i++) {
+                // 1F 的儲位規則：只有 A, B, C, D 且皆為 4 層
+                // B1 的儲位規則：依照 SHELF_CONFIG (A-Q)
+                const activeShelves = (f === '1F')
+                    ? { A: 4, B: 4, C: 4, D: 4 }
+                    : SHELF_CONFIG;
+
+                for(let shelf in activeShelves) {
+                    for(let i=1; i<=activeShelves[shelf]; i++) {
                         const layerStr = i.toString().padStart(2, '0');
                         const id = `${f}-${shelf}-${layerStr}`;
                         if(!cache.locations.some(l => l.id === id)) {
@@ -2452,8 +2456,6 @@
             document.getElementById('tx-form').addEventListener('submit', processTransaction);
 
             // 儲位產生
-            document.getElementById('btn-gen-b1').addEventListener('click', () => runGenerateLocations('B1'));
-            document.getElementById('btn-gen-1f').addEventListener('click', () => runGenerateLocations('1F'));
             document.getElementById('btn-gen-all').addEventListener('click', () => runGenerateLocations('ALL'));
 
             // 自訂儲位 & 自訂物料 Modal 互動
