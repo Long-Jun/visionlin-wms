@@ -2438,8 +2438,13 @@
                 
                 showToast("雲端安全交易處理成功！", "success"); 
                 document.getElementById('tx-form').reset(); 
-                document.getElementById('tx-date').value = new Date().toISOString().slice(0, 16); 
-                document.getElementById('tx-name').value = ''; 
+                document.getElementById('tx-date').value = new Date().toISOString().slice(0, 16);
+                // 還原操作人員
+                const lastUser = safeLocalStorage.getItem("visionlin_wms_last_user");
+                if (lastUser && document.getElementById('tx-user')) document.getElementById('tx-user').value = lastUser;
+                // 重新同步樓層連動儲位
+                syncTxLocationOptions('');
+                syncTxLocationOptions('new-');
                 await syncCache(); 
             } catch (err) { 
                 showToast(`交易處理失敗：${err.message}`, "danger"); 
