@@ -1063,23 +1063,45 @@
                                 <input type="number" id="tx-qty" class="form-control" required min="0.01" step="0.01" placeholder="輸入數量" value="1">
                             </div>
                             <div class="form-group">
+                                <label>目標樓層 *</label>
+                                <select id="tx-floor" class="form-control" required>
+                                    <option value="1F">1F 一樓</option>
+                                    <option value="B1">B1 地下室</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <label id="tx-loc-label" style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>目標儲位 * (入庫使用)</span>
+                                    <span>目標儲位 *</span>
                                     <button type="button" class="btn btn-outline" id="btn-scan-loc" style="padding: 2px 8px; font-size: 0.75rem; height: 22px;"><i data-lucide="scan" style="width:12px; height:12px;"></i> 掃描</button>
                                 </label>
                                 <select id="tx-loc" class="form-control" required>
                                     <option value="">請選擇儲位...</option>
                                 </select>
                             </div>
-                            <div class="form-group" id="tx-new-loc-group" style="display: none;">
+                        </div>
+
+                        <!-- 移位使用之新目標儲位連動列 -->
+                        <div class="form-row" id="tx-new-loc-row" style="display: none;">
+                            <div class="form-group">
+                                <label>新目標樓層 *</label>
+                                <select id="tx-new-floor" class="form-control">
+                                    <option value="1F">1F 一樓</option>
+                                    <option value="B1">B1 地下室</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="grid-column: span 2;">
                                 <label style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>新目標儲位 * (移位使用)</span>
+                                    <span>新目標儲位 *</span>
                                     <button type="button" class="btn btn-outline" id="btn-scan-new-loc" style="padding: 2px 8px; font-size: 0.75rem; height: 22px;"><i data-lucide="scan" style="width:12px; height:12px;"></i> 掃描</button>
                                 </label>
                                 <select id="tx-new-loc" class="form-control">
                                     <option value="">請選擇新儲位...</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <!-- 第五列：設備庫存狀態、操作人員、備註 -->
+                        <div class="form-row">
                             <div class="form-group">
                                 <label>設備庫存狀態</label>
                                 <select id="tx-status" class="form-control">
@@ -1090,8 +1112,6 @@
                                 </select>
                                 <input type="text" id="tx-custom-status" class="form-control" placeholder="請輸入自訂狀態" style="display: none; margin-top: 8px;">
                             </div>
-                        </div>
-                        <div class="form-row">
                             <div class="form-group">
                                 <label>經手人 / 操作人員</label>
                                 <input type="text" id="tx-user" class="form-control" placeholder="填寫經手人姓名">
@@ -1754,6 +1774,29 @@
             }
         }
 
+        function syncTxLocationOptions(prefix) {
+            const floorEl = document.getElementById(`tx-${prefix}floor`);
+            const locEl = document.getElementById(`tx-${prefix}loc`);
+            if (!floorEl || !locEl) return;
+            
+            const selectedFloor = floorEl.value;
+            const currentLoc = locEl.value;
+            
+            let html = `<option value="">請選擇${prefix === 'new-' ? '新' : ''}儲位...</option>`;
+            cache.locations
+                .filter(l => l.floor === selectedFloor)
+                .sort((a, b) => a.id.localeCompare(b.id))
+                .forEach(l => {
+                    html += `<option value="${l.id}">${l.id}</option>`;
+                });
+            locEl.innerHTML = html;
+            
+            // 嘗試保留原選取值（如果符合新樓層）
+            if (currentLoc && currentLoc.split('-')[0] === selectedFloor) {
+                locEl.value = currentLoc;
+            }
+        }
+
         function buildDropdowns() {
             // 初始化時依據目前所選的樓層與儲位填入各篩選選單
             syncInventoryFilters('floor');
@@ -1762,19 +1805,9 @@
             syncShelfFilters('lbl');
             renderTransactionFormFields();
 
-            // 填入出入庫表單的儲位選擇器
-            const txLocEl = document.getElementById('tx-loc');
-            const txNewLocEl = document.getElementById('tx-new-loc');
-            
-            const locOptionsHtml = `
-                <option value="">請選擇儲位...</option>
-                ${cache.locations
-                    .sort((a, b) => a.id.localeCompare(b.id))
-                    .map(l => `<option value="${l.id}">${l.id} (${l.floor} / ${l.shelf}架)</option>`).join('')}
-            `;
-            
-            if (txLocEl) txLocEl.innerHTML = locOptionsHtml;
-            if (txNewLocEl) txNewLocEl.innerHTML = locOptionsHtml.replace('請選擇儲位...', '請選擇新儲位...');
+            // 初始化出入庫的樓層連動儲位下拉選單
+            syncTxLocationOptions('');
+            syncTxLocationOptions('new-');
         }
 
         function switchPage(pageId, targetEl) {
@@ -2663,11 +2696,20 @@
                     const type = document.getElementById('tx-type').value;
                     if (type === 'move') {
                         if (!document.getElementById('tx-loc').value) {
+                            const floor = decodedText.split('-')[0];
+                            document.getElementById('tx-floor').value = floor;
+                            syncTxLocationOptions('');
                             document.getElementById('tx-loc').value = decodedText;
                         } else {
+                            const floor = decodedText.split('-')[0];
+                            document.getElementById('tx-new-floor').value = floor;
+                            syncTxLocationOptions('new-');
                             document.getElementById('tx-new-loc').value = decodedText;
                         }
                     } else {
+                        const floor = decodedText.split('-')[0];
+                        document.getElementById('tx-floor').value = floor;
+                        syncTxLocationOptions('');
                         document.getElementById('tx-loc').value = decodedText;
                     }
                 } else if (currentPage === 'stocktake') {
@@ -2925,16 +2967,20 @@
             // 作業類型切換適配目標儲位文字與欄位顯示
             document.getElementById('tx-type').addEventListener('change', (e) => { 
                 const type = e.target.value; 
-                document.getElementById('tx-new-loc-group').style.display = type === 'move' ? 'block' : 'none'; 
+                document.getElementById('tx-new-loc-row').style.display = type === 'move' ? 'flex' : 'none'; 
                 
-                let labelText = '目標儲位 * (入庫使用)'; 
-                if(type === 'out') labelText = '來源儲位 * (出庫扣除)'; 
-                else if(type === 'move') labelText = '來源儲位 * (轉移起點)'; 
-                else if(type === 'borrow') labelText = '來源儲位 * (借出扣除)'; 
+                let labelText = '目標儲位 *'; 
+                if(type === 'out') labelText = '來源儲位 *'; 
+                else if(type === 'move') labelText = '來源儲位 *'; 
+                else if(type === 'borrow') labelText = '來源儲位 *'; 
                 else if(type === 'return') labelText = '歸還至儲位 *'; 
                 
                 document.getElementById('tx-loc-label').querySelector('span').innerText = labelText; 
             });
+
+            // 交易表單樓層與儲位連動
+            document.getElementById('tx-floor').addEventListener('change', () => syncTxLocationOptions(''));
+            document.getElementById('tx-new-floor').addEventListener('change', () => syncTxLocationOptions('new-'));
 
             // 交易表單送出
             document.getElementById('tx-form').addEventListener('submit', processTransaction);
