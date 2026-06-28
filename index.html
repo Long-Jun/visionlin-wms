@@ -1710,17 +1710,45 @@
             }
         }
 
-        function buildDropdowns() {
-            let html = '';
-            for(let s in SHELF_CONFIG) { 
-                html += `<option value="${s}">${s} 架</option>`; 
+        function syncShelfFilters(prefix) {
+            const floorEl = document.getElementById(`${prefix}-floor`);
+            const shelfEl = document.getElementById(`${prefix}-shelf`);
+            if (!floorEl || !shelfEl) return;
+            
+            const selectedFloor = floorEl.value;
+            const selectedShelf = shelfEl.value;
+            
+            // 決定該樓層可用的層架清單
+            // 1F: A, B, C, D
+            // B1: A-Q
+            let shelves = [];
+            if (selectedFloor === '1F') {
+                shelves = ['A', 'B', 'C', 'D'];
+            } else {
+                shelves = Object.keys(SHELF_CONFIG).sort();
             }
-            document.getElementById('st-shelf').innerHTML = '<option value="ALL">所有層架</option>' + html; 
-            document.getElementById('lbl-shelf').innerHTML = '<option value="ALL">所有層架</option>' + html;
+            
+            // 重新填入層架選項
+            let html = '<option value="ALL">全部層架</option>';
+            shelves.forEach(s => {
+                html += `<option value="${s}">${s} 架</option>`;
+            });
+            shelfEl.innerHTML = html;
+            
+            // 如果先前選的層架不在新的可選清單中，重設為「全部層架」
+            if (selectedShelf && selectedShelf !== 'ALL' && !shelves.includes(selectedShelf)) {
+                shelfEl.value = "ALL";
+            } else {
+                shelfEl.value = selectedShelf;
+            }
+        }
 
-            // 初始化時依據目前所選的樓層填入庫存與儲位篩選
+        function buildDropdowns() {
+            // 初始化時依據目前所選的樓層與儲位填入各篩選選單
             syncInventoryFilters('floor');
             syncLocationFilters();
+            syncShelfFilters('st');
+            syncShelfFilters('lbl');
         }
 
         function switchPage(pageId, targetEl) {
@@ -2580,6 +2608,14 @@
                 syncInventoryFilters('loc');
                 syncStatusFilter();
                 renderInventory();
+            });
+
+            // 盤點與標籤之樓層與層架連動
+            document.getElementById('st-floor').addEventListener('change', () => {
+                syncShelfFilters('st');
+            });
+            document.getElementById('lbl-floor').addEventListener('change', () => {
+                syncShelfFilters('lbl');
             });
 
             // 盤點按鈕與事件
