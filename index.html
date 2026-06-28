@@ -686,10 +686,35 @@
         }
         #print-area { display: none; }
 
+        /* 手機側邊欄遮罩 */
+        #sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 15, 25, 0.6);
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+            transition: opacity 0.25s ease;
+        }
+
         /* 響應式適配 (RWD Rules) */
         @media (max-width: 768px) {
             .sidebar {
-                display: none; /* 手機端隱藏側邊欄 */
+                display: flex !important; /* 強制保持側欄的 Flex 排版 */
+                position: fixed;
+                top: 0;
+                left: -260px; /* 寬度為 260px，預設隱藏在左側外 */
+                width: 260px;
+                height: 100%;
+                z-index: 1001; /* 蓋在內容與底部導覽列之上 */
+                box-shadow: 5px 0 25px rgba(0, 0, 0, 0.5);
+                transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .sidebar.open {
+                left: 0; /* 滑動顯示 */
             }
 
             .menu-toggle {
@@ -751,6 +776,9 @@
     </style>
 </head>
 <body>
+    <!-- 手機側邊欄背景遮罩 -->
+    <div id="sidebar-overlay" class="no-print"></div>
+
     <!-- 吐司通知容器 -->
     <div id="toast-container"></div>
 
@@ -2283,6 +2311,23 @@
         }
 
         // ==========================================
+        // 手機版側邊欄抽屜開關邏輯
+        // ==========================================
+        function openSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar) sidebar.classList.add('open');
+            if (overlay) overlay.style.display = 'block';
+        }
+
+        function closeSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar) sidebar.classList.remove('open');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        // ==========================================
         // 8. 綁定事件監聽器與模態框操作
         // ==========================================
         function bindUIEvents() {
@@ -2291,6 +2336,7 @@
                 el.addEventListener('click', (e) => { 
                     const id = e.currentTarget.id.replace('menu-', '');
                     switchPage(id, e.currentTarget); 
+                    closeSidebar(); // 點選選單項目後，自動關閉手機側邊欄
                 }); 
             });
             document.querySelectorAll('.mobile-nav-item').forEach(el => { 
@@ -2304,10 +2350,14 @@
                 }); 
             });
 
-            // 手機左上角展開選單 (彈出側欄或設定頁面)
-            document.getElementById('btn-mobile-more').addEventListener('click', () => {
-                switchPage('data', document.getElementById('menu-data'));
+            // 手機左上角展開選單 (彈出側邊抽屜選單)
+            document.getElementById('btn-mobile-more').addEventListener('click', (e) => {
+                e.stopPropagation();
+                openSidebar();
             });
+
+            // 點選背景遮罩關閉側邊欄
+            document.getElementById('sidebar-overlay').addEventListener('click', closeSidebar);
 
             // 快速搜尋 (Enter 鍵跳轉)
             document.getElementById('quick-search').addEventListener('keyup', (e) => { 
