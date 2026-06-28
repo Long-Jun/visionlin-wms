@@ -954,10 +954,10 @@
                 <div class="panel">
                     <div class="btn-group" style="justify-content: space-between; align-items: center; margin-bottom: 0;">
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="text" id="mat-search" class="form-control" placeholder="搜尋料號/品名/規格..." style="width: 250px; padding-left: 36px;">
+                            <input type="text" id="mat-search" class="form-control" placeholder="搜尋唯一編號/品牌/型號..." style="width: 250px; padding-left: 36px;">
                             <i data-lucide="search" style="position: absolute; left: 12px; color: var(--text-muted); width: 16px; height: 16px;"></i>
                         </div>
-                        <button class="btn btn-success" id="btn-add-mat"><i data-lucide="plus"></i> 新增雲端物料</button>
+                        <button class="btn btn-success" id="btn-add-mat"><i data-lucide="plus"></i> 新增資通訊設備</button>
                     </div>
                 </div>
                 <div class="panel">
@@ -965,13 +965,11 @@
                         <table id="mat-table">
                             <thead>
                                 <tr>
-                                    <th>料號</th>
-                                    <th>品名</th>
-                                    <th>規格</th>
-                                    <th>類別</th>
+                                    <th>物品編號</th>
+                                    <th>品牌</th>
+                                    <th>型號</th>
+                                    <th>規格描述</th>
                                     <th>單位</th>
-                                    <th>安全庫存</th>
-                                    <th>管制/歸還</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
@@ -986,7 +984,7 @@
                 <div class="panel">
                     <div class="form-row" style="margin-bottom: 15px;">
                         <div style="position: relative; display: flex; align-items: center;">
-                            <input type="text" id="inv-search" class="form-control" placeholder="搜尋料號/品名/儲位..." style="padding-left: 36px;">
+                            <input type="text" id="inv-search" class="form-control" placeholder="搜尋唯一編號/品牌/儲位..." style="padding-left: 36px;">
                             <i data-lucide="search" style="position: absolute; left: 12px; color: var(--text-muted); width: 16px; height: 16px;"></i>
                         </div>
                         <select id="inv-filter-floor" class="form-control">
@@ -1011,8 +1009,9 @@
                             <thead>
                                 <tr>
                                     <th>儲位</th>
-                                    <th>料號</th>
-                                    <th>品名</th>
+                                    <th>物品編號</th>
+                                    <th>品牌</th>
+                                    <th>型號</th>
                                     <th>規格</th>
                                     <th>雲端庫存數</th>
                                     <th>單位</th>
@@ -1050,14 +1049,14 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>料號 *</span>
+                                    <span>物品編號 *</span>
                                     <button type="button" class="btn btn-outline" id="btn-scan-item" style="padding: 2px 8px; font-size: 0.75rem; height: 22px;"><i data-lucide="scan" style="width:12px; height:12px;"></i> 掃描</button>
                                 </label>
-                                <input type="text" id="tx-item" class="form-control" required placeholder="輸入料號後離開(或點擊掃描)自動帶入">
+                                <input type="text" id="tx-item" class="form-control" required placeholder="輸入唯一編號後離開自動帶入">
                             </div>
                             <div class="form-group">
-                                <label>品名 (自動檢索)</label>
-                                <input type="text" id="tx-name" class="form-control" readonly placeholder="自動檢索雲端物料主檔" style="background-color: rgba(255,255,255,0.02); color: var(--text-muted);">
+                                <label>品牌/型號 (自動檢索)</label>
+                                <input type="text" id="tx-name" class="form-control" readonly placeholder="自動檢索雲端主檔" style="background-color: rgba(255,255,255,0.02); color: var(--text-muted);">
                             </div>
                             <div class="form-group">
                                 <label>交易數量 *</label>
@@ -1083,10 +1082,11 @@
                                 <label>物料儲存狀態</label>
                                 <select id="tx-status" class="form-control">
                                     <option value="正常">正常</option>
-                                    <option value="待驗">待驗</option>
                                     <option value="待修">待修</option>
-                                    <option value="待報廢">待報廢</option>
+                                    <option value="報廢">報廢</option>
+                                    <option value="其他">其他...</option>
                                 </select>
+                                <input type="text" id="tx-custom-status" class="form-control" placeholder="請輸入自訂狀態" style="display: none; margin-top: 8px;">
                             </div>
                         </div>
                         <div class="form-row">
@@ -1195,8 +1195,10 @@
                                 <option value="正常">正常</option>
                                 <option value="待驗">待驗</option>
                                 <option value="待修">待修</option>
-                                <option value="待報廢">待報廢</option>
+                                <option value="報廢">報廢</option>
+                                <option value="其他">其他...</option>
                             </select>
+                            <input type="text" id="st-mob-custom-status" class="form-control" placeholder="請輸入自訂狀態" style="display: none; margin-top: 8px;">
                         </div>
                     </div>
 
@@ -1346,38 +1348,26 @@
             <div class="modal-body">
                 <form id="form-add-mat">
                     <div class="form-group">
-                        <label>料號 (若留空系統會自動生成)</label>
-                        <input type="text" id="new-mat-id" class="form-control" placeholder="例如: MAT-0005">
+                        <label>物品編號 * (唯一碼 / 資產條碼)</label>
+                        <input type="text" id="new-mat-id" class="form-control" required placeholder="例如: ASSET-0005">
                     </div>
                     <div class="form-group">
-                        <label>品名 *</label>
-                        <input type="text" id="new-mat-name" class="form-control" required placeholder="例如: M3 螺絲">
+                        <label>品牌 *</label>
+                        <input type="text" id="new-mat-brand" class="form-control" required placeholder="例如: Apple, ASUS">
                     </div>
                     <div class="form-group">
-                        <label>規格</label>
-                        <input type="text" id="new-mat-spec" class="form-control" placeholder="例如: M3x8">
+                        <label>型號 (可選)</label>
+                        <input type="text" id="new-mat-model" class="form-control" placeholder="例如: MacBook Pro, ExpertBook">
                     </div>
                     <div class="form-group">
-                        <label>類別</label>
-                        <input type="text" id="new-mat-category" class="form-control" placeholder="例如: 五金" value="電子零件">
+                        <label>規格描述 (可選)</label>
+                        <input type="text" id="new-mat-spec" class="form-control" placeholder="例如: 16G/512G">
                     </div>
                     <div class="form-group">
-                        <label>計量單位</label>
-                        <input type="text" id="new-mat-unit" class="form-control" placeholder="例如: pcs" value="pcs">
+                        <label>計量單位 * (必選)</label>
+                        <input type="text" id="new-mat-unit" class="form-control" required placeholder="例如: 台, 個" value="台">
                     </div>
-                    <div class="form-group">
-                        <label>安全庫存量 *</label>
-                        <input type="number" id="new-mat-safe-stock" class="form-control" required value="10">
-                    </div>
-                    <div style="display: flex; gap: 20px; margin-top: 10px; margin-bottom: 20px;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
-                            <input type="checkbox" id="new-mat-controlled" style="width:16px; height:16px;"> 貴重品管制
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
-                            <input type="checkbox" id="new-mat-returnable" style="width:16px; height:16px;"> 必須歸還
-                        </label>
-                    </div>
-                    <button type="submit" class="btn btn-success" style="width: 100%; height: 42px;">建立雲端物料</button>
+                    <button type="submit" class="btn btn-success" style="width: 100%; height: 42px; margin-top: 15px;">建立雲端物料</button>
                 </form>
             </div>
         </div>
@@ -1460,10 +1450,10 @@
         window.deviceId = deviceId;
 
         const DEFAULT_ITEMS = [
-            { id: 'MAT-0001', name: 'M3 螺絲', spec: 'M3x8', category: '五金', unit: 'pcs', safeStock: 100, isControlled: false, returnable: false },
-            { id: 'MAT-0002', name: '杜邦線', spec: '公對母 20cm', category: '線材', unit: 'pcs', safeStock: 20, isControlled: false, returnable: false },
-            { id: 'MAT-0003', name: '電源供應器', spec: '24V 5A', category: '電源', unit: 'pcs', safeStock: 2, isControlled: true, returnable: false },
-            { id: 'MAT-0004', name: 'Arduino Nano', spec: '相容板', category: '電子模組', unit: 'pcs', safeStock: 5, isControlled: true, returnable: true }
+            { id: 'ASSET-0001', brand: 'Apple', model: 'MacBook Pro 14', spec: 'M3/16G/512G', unit: '台' },
+            { id: 'ASSET-0002', brand: 'ASUS', model: 'ExpertBook B9', spec: 'i7/16G/1T', unit: '台' },
+            { id: 'ASSET-0003', brand: 'Dell', model: 'OptiPlex 7010', spec: 'i5/16G/512G', unit: '台' },
+            { id: 'ASSET-0004', brand: 'Cisco', model: 'Catalyst 9300', spec: '24-Port PoE Switch', unit: '台' }
         ];
 
         async function init() {
@@ -1791,15 +1781,12 @@
         function renderDashboard() {
             const totalLocs = cache.locations.length;
             const usedLocs = new Set(cache.inventory.filter(i => i.quantity > 0).map(i => i.locationId)).size;
-            let lowStockCount = 0;
             
-            cache.items.forEach(item => {
-                const totalNormal = cache.inventory.filter(i => i.itemId === item.id && i.status === '正常').reduce((sum, i) => sum + Number(i.quantity), 0);
-                if (totalNormal < item.safeStock) lowStockCount++;
-            });
-            
-            const pending = cache.inventory.filter(i => i.status === '待驗').reduce((sum, i) => sum + Number(i.quantity), 0);
-            const scrap = cache.inventory.filter(i => i.status === '待報廢').reduce((sum, i) => sum + Number(i.quantity), 0);
+            // 計算各狀態的總設備數量
+            const totalNormal = cache.inventory.filter(i => i.status === '正常').reduce((sum, i) => sum + Number(i.quantity), 0);
+            const totalPending = cache.inventory.filter(i => i.status === '待驗').reduce((sum, i) => sum + Number(i.quantity), 0);
+            const totalRepair = cache.inventory.filter(i => i.status === '待修').reduce((sum, i) => sum + Number(i.quantity), 0);
+            const totalScrap = cache.inventory.filter(i => i.status === '報廢').reduce((sum, i) => sum + Number(i.quantity), 0);
             
             // 寫入儀表板卡片
             document.getElementById('dash-cards').innerHTML = `
@@ -1810,41 +1797,42 @@
                 </div>
                 <div class="card success">
                     <i data-lucide="box" class="card-icon"></i>
-                    <h3>物料品項總數</h3>
+                    <h3>設備品項總數</h3>
                     <p>${cache.items.length}</p>
                 </div>
-                <div class="card ${lowStockCount > 0 ? 'warning' : 'primary'}">
-                    <i data-lucide="alert-triangle" class="card-icon"></i>
-                    <h3>低於安全庫存</h3>
-                    <p>${lowStockCount}</p>
+                <div class="card success">
+                    <i data-lucide="check-circle" class="card-icon"></i>
+                    <h3>正常設備存量</h3>
+                    <p>${totalNormal}</p>
                 </div>
-                <div class="card ${pending > 0 ? 'warning' : 'primary'}">
-                    <i data-lucide="clipboard" class="card-icon"></i>
-                    <h3>待驗物料量</h3>
-                    <p>${pending}</p>
+                <div class="card ${totalRepair > 0 ? 'warning' : 'primary'}">
+                    <i data-lucide="wrench" class="card-icon"></i>
+                    <h3>待修設備存量</h3>
+                    <p>${totalRepair}</p>
                 </div>
-                <div class="card ${scrap > 0 ? 'danger' : 'primary'}">
+                <div class="card ${totalScrap > 0 ? 'danger' : 'primary'}">
                     <i data-lucide="trash-2" class="card-icon"></i>
-                    <h3>待報廢數量</h3>
-                    <p>${scrap}</p>
+                    <h3>報廢設備存量</h3>
+                    <p>${totalScrap}</p>
                 </div>
             `;
             
             let html = '';
             cache.transactions.slice(0, 50).forEach(tx => {
                 const item = cache.items.find(i => i.id === tx.itemId) || {};
-                let typeMap = {in:'入庫', out:'出庫', move:'移位', borrow:'借出', return:'歸還', adjust:'盤點修復'};
+                let typeMap = {in:'入庫', out:'出庫', move:'移位', borrow:'借出', return:'歸還', adjust:'盤點落差修正'};
                 let locStr = tx.type === 'move' ? `${tx.locationId} ➔ ${tx.newLocationId}` : tx.locationId;
                 
                 // 顯示人員與設備唯一碼
                 const userDisplay = tx.user ? `${tx.user}${tx.deviceId ? ` <span style="font-size:0.72rem; color:var(--accent); display:block; margin-top:2px; font-family:monospace;">(${tx.deviceId})</span>` : ''}` : '-';
+                const itemDisplay = item.brand ? `${item.brand} ${item.model||''}` : (item.name || '-');
                 
                 html += `
                     <tr>
                         <td>${tx.date}</td>
                         <td><span class="status-badge ${tx.type==='in'?'bg-normal':(tx.type==='out'?'bg-scrap':'bg-borrowed')}">${typeMap[tx.type]||tx.type}</span></td>
                         <td><strong>${tx.itemId}</strong></td>
-                        <td>${item.name||'-'}</td>
+                        <td>${itemDisplay}</td>
                         <td style="font-weight:bold;">${tx.quantity}</td>
                         <td>${locStr}</td>
                         <td>${userDisplay}</td>
@@ -1855,87 +1843,133 @@
             lucide.createIcons();
         }
 
-        // ==========================================
-        // 3. 資料庫操作與批次佈署 (Compat API)
-        // ==========================================
-        async function runGenerateLocations(mode) {
-            if(!confirm("確認執行雲端批次鋪設儲位？將會跳過已存在的儲位代碼。")) return;
-            showLoading(true, "雲端儲位鋪設中...");
-            const floors = mode === 'ALL' ? ['B1', '1F'] : [mode];
-            const batch = db.batch(); 
-            let counter = 0;
+        // 吐司通知
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
             
-            floors.forEach(f => {
-                // 1F 的儲位規則：只有 A, B, C, D 且皆為 4 層
-                // B1 的儲位規則：依照 SHELF_CONFIG (A-Q)
-                const activeShelves = (f === '1F')
-                    ? { A: 4, B: 4, C: 4, D: 4 }
-                    : SHELF_CONFIG;
-
-                for(let shelf in activeShelves) {
-                    for(let i=1; i<=activeShelves[shelf]; i++) {
-                        const layerStr = i.toString().padStart(2, '0');
-                        const id = `${f}-${shelf}-${layerStr}`;
-                        if(!cache.locations.some(l => l.id === id)) {
-                            const ref = db.collection("locations").doc(id);
-                            batch.set(ref, { id, floor: f, shelf, layer: layerStr, status: '啟用' }); 
-                            counter++;
-                        }
-                    }
-                }
-            });
+            let icon = 'info';
+            if (type === 'success') icon = 'check-circle';
+            if (type === 'warning') icon = 'alert-triangle';
+            if (type === 'danger') icon = 'x-circle';
             
-            if(counter > 0) { 
-                await batch.commit(); 
-                await syncCache(); 
-                renderLocations(); 
-                showToast(`雲端儲位佈署成功，共新增 ${counter} 個儲位。`, "success"); 
-            } else { 
-                showToast("所選範圍儲位皆已存在，無須重複建立。", "warning"); 
-            }
-            showLoading(false);
+            toast.innerHTML = `
+                <i data-lucide="${icon}" style="width: 18px; height: 18px;"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                toast.style.animation = 'toastOut 0.25s ease forwards';
+                setTimeout(() => toast.remove(), 250);
+            }, 3000);
         }
 
-        function renderLocations() {
-            const initPanel = document.getElementById('panel-loc-initialize');
-            if (initPanel) {
-                initPanel.style.display = cache.locations.length === 0 ? 'block' : 'none';
-            }
-
-            const fFloor = document.getElementById('loc-filter-floor').value; 
-            const fShelf = document.getElementById('loc-filter-shelf').value;
-            let html = '';
+        function syncStatusFilter() {
+            const floorEl = document.getElementById('inv-filter-floor');
+            const locEl = document.getElementById('inv-filter-loc');
+            const statusEl = document.getElementById('inv-filter-status');
+            if (!floorEl || !locEl || !statusEl) return;
             
-            cache.locations.filter(l => (!fFloor || l.floor === fFloor) && (!fShelf || l.shelf === fShelf)).sort((a,b) => a.id.localeCompare(b.id)).forEach(l => {
-                html += `
-                    <tr>
-                        <td><strong>${l.id}</strong></td>
-                        <td>${l.floor}</td>
-                        <td>${l.shelf} 架</td>
-                        <td>第 ${Number(l.layer)} 層</td>
-                        <td><span class="status-badge bg-normal">${l.status}</span></td>
-                        <td><button class="btn btn-danger btn-sm" data-id="${l.id}"><i data-lucide="trash-2" style="width:12px; height:12px;"></i> 刪除</button></td>
-                    </tr>
-                `;
+            const selectedFloor = floorEl.value;
+            const selectedLoc = locEl.value;
+            const selectedStatus = statusEl.value;
+            
+            // 找出符合目前選取「樓層」與「儲位」的所有庫存資料
+            let filteredInventory = cache.inventory.filter(inv => inv.quantity > 0);
+            if (selectedLoc) {
+                filteredInventory = filteredInventory.filter(inv => inv.locationId === selectedLoc);
+            } else if (selectedFloor) {
+                filteredInventory = filteredInventory.filter(inv => inv.locationId.split('-')[0] === selectedFloor);
+            }
+            
+            // 取得這些庫存中實際存在的所有「狀態」
+            const activeStatuses = [...new Set(filteredInventory.map(inv => inv.status))];
+            
+            // 重新填入狀態選項
+            let html = '<option value="">所有狀態</option>';
+            const allPossibleStatuses = ["正常", "待驗", "待修", "報廢", "借出"];
+            allPossibleStatuses.forEach(s => {
+                if (activeStatuses.includes(s)) {
+                    html += `<option value="${s}">${s}</option>`;
+                }
             });
-            document.querySelector('#loc-table tbody').innerHTML = html;
-            lucide.createIcons();
+            statusEl.innerHTML = html;
+            
+            // 如果先前選的狀態仍在新的可用清單中，保留選取；否則重設為「所有狀態」
+            if (selectedStatus && activeStatuses.includes(selectedStatus)) {
+                statusEl.value = selectedStatus;
+            } else {
+                statusEl.value = "";
+            }
+        }
+
+        function syncInventoryFilters(triggerSource) {
+            const floorEl = document.getElementById('inv-filter-floor');
+            const locEl = document.getElementById('inv-filter-loc');
+            if (!floorEl || !locEl) return;
+            
+            const selectedFloor = floorEl.value;
+            const selectedLoc = locEl.value;
+            
+            if (triggerSource === 'floor') {
+                // 1. 如果樓層改變，重新填入符合該樓層的儲位選項
+                let locHtml = '<option value="">所有儲位</option>';
+                cache.locations
+                    .filter(l => !selectedFloor || l.floor === selectedFloor)
+                    .sort((a, b) => a.id.localeCompare(b.id))
+                    .forEach(l => {
+                        locHtml += `<option value="${l.id}">${l.id}</option>`;
+                    });
+                locEl.innerHTML = locHtml;
+                
+                // 如果先前選的儲位不符合新的樓層，重設為「所有儲位」
+                if (selectedLoc) {
+                    const locFloor = selectedLoc.split('-')[0];
+                    if (selectedFloor && locFloor !== selectedFloor) {
+                        locEl.value = "";
+                    } else {
+                        locEl.value = selectedLoc;
+                    }
+                }
+            } else if (triggerSource === 'loc') {
+                // 2. 如果儲位改變，自動將樓層切換為該儲位的對應樓層
+                if (selectedLoc) {
+                    const locFloor = selectedLoc.split('-')[0];
+                    if (floorEl.value !== locFloor) {
+                        floorEl.value = locFloor;
+                        // 因為樓層被動改變，需要重刷該樓層對應的儲位清單，但保留目前已選的儲位
+                        let locHtml = '<option value="">所有儲位</option>';
+                        cache.locations
+                            .filter(l => l.floor === locFloor)
+                            .sort((a, b) => a.id.localeCompare(b.id))
+                            .forEach(l => {
+                                locHtml += `<option value="${l.id}">${l.id}</option>`;
+                            });
+                        locEl.innerHTML = locHtml;
+                        locEl.value = selectedLoc;
+                    }
+                }
+            }
         }
 
         function renderMaterials() {
-            const q = document.getElementById('mat-search').value.toLowerCase(); 
+            const q = document.getElementById('mat-search').value.toLowerCase().trim();
             let html = '';
             
-            cache.items.filter(i => i.id.toLowerCase().includes(q) || i.name.toLowerCase().includes(q) || (i.spec && i.spec.toLowerCase().includes(q))).forEach(i => {
+            cache.items.filter(i => {
+                const searchStr = `${i.id} ${i.brand||''} ${i.model||''} ${i.spec||''}`.toLowerCase();
+                return searchStr.includes(q);
+            }).forEach(i => {
                 html += `
                     <tr>
                         <td><strong>${i.id}</strong></td>
-                        <td>${i.name}</td>
+                        <td>${i.brand||i.name||'-'}</td>
+                        <td>${i.model||'-'}</td>
                         <td>${i.spec||'-'}</td>
-                        <td>${i.category||'-'}</td>
-                        <td>${i.unit}</td>
-                        <td>${i.safeStock}</td>
-                        <td>${i.isControlled?'貴重':'-'} / ${i.returnable?'需還':'-'}</td>
+                        <td>${i.unit||'台'}</td>
                         <td><button class="btn btn-danger btn-sm" data-id="${i.id}"><i data-lucide="trash-2" style="width:12px; height:12px;"></i> 刪除</button></td>
                     </tr>
                 `;
@@ -1960,26 +1994,24 @@
                 if(floor && locParts[0] !== floor) return;
                 if(filterLoc && inv.locationId !== filterLoc) return; // 儲位匹配
                 
-                const searchTarget = `${inv.locationId} ${inv.itemId} ${item.name||''} ${item.spec||''}`.toLowerCase();
+                const searchTarget = `${inv.locationId} ${inv.itemId} ${item.brand||''} ${item.model||''} ${item.spec||''}`.toLowerCase();
                 if(q && !searchTarget.includes(q)) return;
-                
-                const totalNormal = cache.inventory.filter(i => i.itemId === inv.itemId && i.status === '正常').reduce((sum, i) => sum + Number(i.quantity), 0);
-                const isLowStock = (inv.status === '正常' && totalNormal < item.safeStock);
                 
                 let badgeClass = 'bg-normal';
                 if(inv.status === '待驗') badgeClass = 'bg-pending';
                 if(inv.status === '待修') badgeClass = 'bg-repair';
-                if(inv.status === '待報廢') badgeClass = 'bg-scrap';
+                if(inv.status === '報廢') badgeClass = 'bg-scrap';
                 if(inv.status === '借出') badgeClass = 'bg-borrowed';
 
                 html += `
-                    <tr class="${isLowStock ? 'status-low' : ''}">
+                    <tr>
                         <td><strong>${inv.locationId}</strong></td>
                         <td>${inv.itemId}</td>
-                        <td>${item.name||'-'}</td>
+                        <td>${item.brand||item.name||'-'}</td>
+                        <td>${item.model||'-'}</td>
                         <td>${item.spec||'-'}</td>
-                        <td style="font-weight:bold; font-size:1rem;">${inv.quantity}</td>
-                        <td>${item.unit||'pcs'}</td>
+                        <td style="font-weight:bold; font-size:1.05rem; color: var(--success);">${inv.quantity}</td>
+                        <td>${item.unit||'台'}</td>
                         <td><span class="status-badge ${badgeClass}">${inv.status}</span></td>
                         <td>${inv.lastUpdated||'-'}</td>
                     </tr>
@@ -1999,16 +2031,21 @@
             const qty = Number(document.getElementById('tx-qty').value);
             const loc = document.getElementById('tx-loc').value.trim(); 
             const newLoc = document.getElementById('tx-new-loc').value.trim();
-            const status = document.getElementById('tx-status').value; 
+            let status = document.getElementById('tx-status').value; 
             const user = document.getElementById('tx-user').value.trim(); 
             const note = document.getElementById('tx-note').value;
+
+            if (status === '其他') {
+                status = document.getElementById('tx-custom-status').value.trim();
+                if (!status) return showToast("請輸入自訂狀態！", "danger");
+            }
 
             if(!user) return showToast("請輸入操作人員姓名！", "danger");
             safeLocalStorage.setItem("visionlin_wms_last_user", user);
             if (document.getElementById('st-user')) document.getElementById('st-user').value = user;
             if (document.getElementById('st-mob-user')) document.getElementById('st-mob-user').value = user;
 
-            if(!cache.items.some(i => i.id === itemId)) return showToast(`料號 ${itemId} 主檔不存在！`, "danger");
+            if(!cache.items.some(i => i.id === itemId)) return showToast(`物品編號 ${itemId} 主檔不存在！`, "danger");
             if(type !== 'out' && type !== 'borrow' && type !== 'return' && !cache.locations.some(l => l.id === loc)) return showToast(`目標儲位 ${loc} 尚未啟用！`, "danger");
             if(type === 'move' && !cache.locations.some(l => l.id === newLoc)) return showToast(`新目標儲位 ${newLoc} 尚未啟用！`, "danger");
 
@@ -2155,10 +2192,10 @@
             document.getElementById('st-mobile-progress').innerText = `盤點進度：項目 ${idx + 1} / ${currentStocktakeData.length}`;
             document.getElementById('st-mob-loc').innerText = item.locationId;
             document.getElementById('st-mob-status').innerText = item.status;
-            document.getElementById('st-mob-name').innerText = item.itemName || '未命名項目';
-            document.getElementById('st-mob-item').innerText = `料號: ${item.itemId}`;
+            document.getElementById('st-mob-name').innerText = item.itemBrand ? `${item.itemBrand} ${item.itemModel||''}` : (item.itemName || '未命名項目');
+            document.getElementById('st-mob-item').innerText = `物品編號: ${item.itemId}`;
             document.getElementById('st-mob-spec').innerText = `規格: ${item.spec || '-'}`;
-            document.getElementById('st-mob-sys-qty').innerText = `${item.quantity} ${item.unit || 'pcs'}`;
+            document.getElementById('st-mob-sys-qty').innerText = `${item.quantity} ${item.unit || '台'}`;
             
             const diff = item.realQty - item.quantity;
             const diffEl = document.getElementById('st-mob-diff');
@@ -2166,7 +2203,20 @@
             diffEl.style.color = diff !== 0 ? 'var(--warning)' : 'var(--text-main)';
             
             document.getElementById('st-mob-real-qty').value = item.realQty;
-            document.getElementById('st-mob-real-status').value = item.realStatus;
+            
+            // 判斷狀態是否為預設，若非則切換為「其他」並顯示自訂輸入框
+            const stdStatuses = ["正常", "待驗", "待修", "報廢"];
+            const selectEl = document.getElementById('st-mob-real-status');
+            const customInput = document.getElementById('st-mob-custom-status');
+            if (stdStatuses.includes(item.realStatus)) {
+                selectEl.value = item.realStatus;
+                customInput.style.display = 'none';
+                customInput.value = '';
+            } else {
+                selectEl.value = "其他";
+                customInput.style.display = 'block';
+                customInput.value = item.realStatus;
+            }
         }
 
         async function commitStocktakeFix() {
@@ -2532,10 +2582,24 @@
                 } 
             });
 
-            // 表單輸入料號檢索
+            // 表單輸入物品編號檢索
             document.getElementById('tx-item').addEventListener('blur', (e) => { 
                 const item = cache.items.find(i => i.id === e.target.value.trim()); 
-                document.getElementById('tx-name').value = item ? item.name : '❌ 未尋獲此料號項目'; 
+                document.getElementById('tx-name').value = item ? `${item.brand} ${item.model || ''}` : '❌ 未尋獲此物品編號'; 
+            });
+
+            // 交易狀態「其他」選擇切換
+            document.getElementById('tx-status').addEventListener('change', (e) => {
+                const customInput = document.getElementById('tx-custom-status');
+                if (e.target.value === '其他') {
+                    customInput.style.display = 'block';
+                    customInput.setAttribute('required', 'true');
+                    customInput.focus();
+                } else {
+                    customInput.style.display = 'none';
+                    customInput.removeAttribute('required');
+                    customInput.value = '';
+                }
             });
 
             // 作業類型切換適配目標儲位文字與欄位顯示
@@ -2653,8 +2717,21 @@
             });
 
             document.getElementById('st-mob-real-status').addEventListener('change', (e) => {
+                const customInput = document.getElementById('st-mob-custom-status');
+                if (e.target.value === '其他') {
+                    customInput.style.display = 'block';
+                    customInput.focus();
+                } else {
+                    customInput.style.display = 'none';
+                    customInput.value = '';
+                    if (currentStocktakeData.length > 0) {
+                        currentStocktakeData[currentStocktakeIndex].realStatus = e.target.value;
+                    }
+                }
+            });
+            document.getElementById('st-mob-custom-status').addEventListener('input', (e) => {
                 if (currentStocktakeData.length > 0) {
-                    currentStocktakeData[currentStocktakeIndex].realStatus = e.target.value;
+                    currentStocktakeData[currentStocktakeIndex].realStatus = e.target.value.trim();
                 }
             });
 
@@ -2828,30 +2905,30 @@
                 e.preventDefault();
                 let id = document.getElementById('new-mat-id').value.trim();
                 if (!id) {
-                    id = `MAT-${String(cache.items.length + 1).padStart(4, '0')}`;
+                    return showToast("請輸入物品編號 (唯一編碼)！", "danger");
                 }
                 if (cache.items.some(i => i.id === id)) {
-                    return showToast(`料號 ${id} 已存在！`, "danger");
+                    return showToast(`物品編號 ${id} 已存在！`, "danger");
                 }
                 
-                const name = document.getElementById('new-mat-name').value.trim();
+                const brand = document.getElementById('new-mat-brand').value.trim();
+                const model = document.getElementById('new-mat-model').value.trim();
                 const spec = document.getElementById('new-mat-spec').value.trim();
-                const category = document.getElementById('new-mat-category').value.trim();
                 const unit = document.getElementById('new-mat-unit').value.trim();
-                const safeStock = Number(document.getElementById('new-mat-safe-stock').value);
-                const isControlled = document.getElementById('new-mat-controlled').checked;
-                const returnable = document.getElementById('new-mat-returnable').checked;
+
+                if (!brand) return showToast("品牌為必填欄位！", "danger");
+                if (!unit) return showToast("單位為必填欄位！", "danger");
 
                 showLoading(true, "雲端物料主檔寫入中...");
                 try {
-                    await db.collection("items").doc(id).set({ id, name, spec, category, unit, safeStock, isControlled, returnable });
-                    showToast(`物料 ${id} - ${name} 建立成功！`, "success");
+                    await db.collection("items").doc(id).set({ id, brand, model, spec, unit });
+                    showToast(`物品 ${id} - ${brand} 建立成功！`, "success");
                     document.getElementById('modal-add-material').style.display = 'none';
                     document.getElementById('form-add-mat').reset();
                     await syncCache();
                     renderMaterials();
                 } catch(err) {
-                    showToast("建立物料失敗：" + err.message, "danger");
+                    showToast("建立物品失敗：" + err.message, "danger");
                 } finally {
                     showLoading(false);
                 }
