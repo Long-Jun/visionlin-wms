@@ -1042,26 +1042,26 @@
                                 <input type="datetime-local" id="tx-date" class="form-control" required>
                             </div>
                         </div>
+                        <!-- 第二列：物品編號 / 唯一碼擺第一 -->
                         <div class="form-row">
-                            <div class="form-group">
-                                <label>選擇設備型號 *</label>
-                                <select id="tx-model-id" class="form-control" required>
-                                    <option value="">請選擇設備...</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
+                            <div class="form-group" style="grid-column: span 2;">
                                 <label style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>物品編號 / 唯一碼 *</span>
+                                    <span>物品編號 / 唯一碼 * (唯一識別碼)</span>
                                     <button type="button" class="btn btn-outline" id="btn-scan-item" style="padding: 2px 8px; font-size: 0.75rem; height: 22px;"><i data-lucide="scan" style="width:12px; height:12px;"></i> 掃描</button>
                                 </label>
                                 <input type="text" id="tx-asset-id" class="form-control" required placeholder="請掃描或輸入實體設備唯一條碼/序號">
                             </div>
+                        </div>
+
+                        <!-- 第三區塊：與庫存選項設定動態連動的欄位 -->
+                        <div class="form-row" id="tx-dynamic-fields" style="grid-column: span 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; width: 100%;">
+                            <!-- 這裡由 Javascript 動態生成所有自訂選項欄位（如機器種類、品牌、型號、規格描述、單位等） -->
+                        </div>
+                        <div class="form-row">
                             <div class="form-group">
                                 <label>交易數量 *</label>
                                 <input type="number" id="tx-qty" class="form-control" required min="0.01" step="0.01" placeholder="輸入數量" value="1">
                             </div>
-                        </div>
-                        <div class="form-row">
                             <div class="form-group">
                                 <label id="tx-loc-label" style="display: flex; justify-content: space-between; align-items: center;">
                                     <span>目標儲位 * (入庫使用)</span>
