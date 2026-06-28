@@ -1638,17 +1638,50 @@
             }
         }
 
+        function syncLocationFilters() {
+            const floorEl = document.getElementById('loc-filter-floor');
+            const shelfEl = document.getElementById('loc-filter-shelf');
+            if (!floorEl || !shelfEl) return;
+            
+            const selectedFloor = floorEl.value;
+            const selectedShelf = shelfEl.value;
+            
+            // 決定該樓層可用的層架清單
+            // 1F: A, B, C, D
+            // B1: A-Q
+            let shelves = [];
+            if (selectedFloor === '1F') {
+                shelves = ['A', 'B', 'C', 'D'];
+            } else {
+                shelves = Object.keys(SHELF_CONFIG).sort();
+            }
+            
+            // 重新填入層架選項
+            let html = '<option value="">所有層架</option>';
+            shelves.forEach(s => {
+                html += `<option value="${s}">${s} 架</option>`;
+            });
+            shelfEl.innerHTML = html;
+            
+            // 如果先前選的層架不在新的可選清單中，重設為「所有層架」
+            if (selectedShelf && !shelves.includes(selectedShelf)) {
+                shelfEl.value = "";
+            } else {
+                shelfEl.value = selectedShelf;
+            }
+        }
+
         function buildDropdowns() {
             let html = '';
             for(let s in SHELF_CONFIG) { 
                 html += `<option value="${s}">${s} 架</option>`; 
             }
-            document.getElementById('loc-filter-shelf').innerHTML = '<option value="">所有層架</option>' + html; 
             document.getElementById('st-shelf').innerHTML = '<option value="ALL">所有層架</option>' + html; 
             document.getElementById('lbl-shelf').innerHTML = '<option value="ALL">所有層架</option>' + html;
 
-            // 初始化時依據目前所選的樓層填入儲位篩選
+            // 初始化時依據目前所選的樓層填入庫存與儲位篩選
             syncInventoryFilters('floor');
+            syncLocationFilters();
         }
 
         function switchPage(pageId, targetEl) {
@@ -2489,7 +2522,10 @@
             };
 
             // 儲位篩選與搜尋
-            document.getElementById('loc-filter-floor').addEventListener('change', renderLocations); 
+            document.getElementById('loc-filter-floor').addEventListener('change', () => {
+                syncLocationFilters();
+                renderLocations();
+            }); 
             document.getElementById('loc-filter-shelf').addEventListener('change', renderLocations);
             document.getElementById('mat-search').addEventListener('keyup', renderMaterials);
 
