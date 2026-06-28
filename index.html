@@ -3121,23 +3121,6 @@
                 } 
             });
 
-            document.getElementById('mat-table').addEventListener('click', async (e) => { 
-                if(e.target.classList.contains('btn-danger') || e.target.closest('.btn-danger')) { 
-                    const btn = e.target.classList.contains('btn-danger') ? e.target : e.target.closest('.btn-danger');
-                    const id = btn.getAttribute('data-id'); 
-                    if(cache.inventory.some(i => i.itemId === id && i.quantity > 0)) {
-                        return showToast("該物料在倉庫中尚有庫存明細，拒絕刪除。", "danger"); 
-                    }
-                    if(confirm(`確認從雲端資料庫中永久移除物料 ${id}？`)) { 
-                        showLoading(true, "雲端物料刪除中..."); 
-                        await db.collection("items").doc(id).delete(); 
-                        await syncCache(); 
-                        renderMaterials(); 
-                        showToast(`物料 ${id} 已移除。`, "success");
-                        showLoading(false); 
-                    } 
-                } 
-            });
 
             // 電腦版實盤輸入框變更對帳數
             document.getElementById('st-table').addEventListener('input', (e) => { 
