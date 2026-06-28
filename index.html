@@ -2324,6 +2324,7 @@
             const type = document.getElementById('tx-type').value; 
             const date = document.getElementById('tx-date').value.replace('T', ' ');
             const assetId = document.getElementById('tx-asset-id').value.trim();
+            const itemId = assetId; // 橋接：表單欄位命名為 assetId，資料庫 schema 使用 itemId
             const qty = Number(document.getElementById('tx-qty').value);
             const loc = document.getElementById('tx-loc').value.trim(); 
             const newLoc = document.getElementById('tx-new-loc').value.trim();
@@ -2378,7 +2379,7 @@
                     }
 
                     if(type === 'in') { 
-                        transaction.set(srcInvRef, { itemId, locationId: loc, quantity: currentSrcQty + qty, status, lastUpdated: date }); 
+                        transaction.set(srcInvRef, { itemId, locationId: loc, quantity: currentSrcQty + qty, status, lastUpdated: date, ...dynPayload }); 
                     }
                     else if(type === 'out') { 
                         const nextQty = currentSrcQty - qty; 
@@ -2395,7 +2396,7 @@
                         const destSnap = await transaction.get(destInvRef); 
                         let currentDestQty = destSnap.exists ? destSnap.data().quantity : 0;
                         
-                        transaction.set(destInvRef, { itemId, locationId: newLoc, quantity: currentDestQty + qty, status, lastUpdated: date });
+                        transaction.set(destInvRef, { itemId, locationId: newLoc, quantity: currentDestQty + qty, status, lastUpdated: date, ...dynPayload });
                     }
                     else if(type === 'borrow') {
                         const nextSrcQty = currentSrcQty - qty; 
@@ -2407,7 +2408,7 @@
                         const borrowSnap = await transaction.get(borrowInvRef); 
                         let currentBorrowQty = borrowSnap.exists ? borrowSnap.data().quantity : 0;
                         
-                        transaction.set(borrowInvRef, { itemId, locationId: loc, quantity: currentBorrowQty + qty, status: '借出', lastUpdated: date });
+                        transaction.set(borrowInvRef, { itemId, locationId: loc, quantity: currentBorrowQty + qty, status: '借出', lastUpdated: date, ...dynPayload });
                     }
                     else if(type === 'return') {
                         const borrowInvId = `${itemId}_${loc}_借出`; 
@@ -2421,7 +2422,7 @@
                         if(currentBorrowQty - qty === 0) transaction.delete(borrowInvRef); 
                         else transaction.update(borrowInvRef, { quantity: currentBorrowQty - qty, lastUpdated: date });
                         
-                        transaction.set(srcInvRef, { itemId, locationId: loc, quantity: currentSrcQty + qty, status, lastUpdated: date });
+                        transaction.set(srcInvRef, { itemId, locationId: loc, quantity: currentSrcQty + qty, status, lastUpdated: date, ...dynPayload });
                     }
                     
                     const logId = `TX-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
@@ -2430,7 +2431,8 @@
                         id: logId, date, type, itemId, quantity: qty, locationId: loc, 
                         newLocationId: type==='move'?newLoc:'', status: type==='borrow'?'借出':status, user, 
                         deviceId: window.deviceId,
-                        note 
+                        note,
+                        ...dynPayload
                     });
                 });
                 
