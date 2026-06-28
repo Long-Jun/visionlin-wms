@@ -803,7 +803,7 @@
                 <i data-lucide="map-pin"></i> 儲位主檔
             </li>
             <li class="nav-item" id="menu-materials">
-                <i data-lucide="cpu"></i> 機器種類主檔
+                <i data-lucide="sliders"></i> 庫存選項設定
             </li>
             <li class="nav-item" id="menu-inventory">
                 <i data-lucide="layers"></i> 庫存明細
@@ -1077,7 +1077,7 @@
                                 <input type="text" id="tx-new-loc" class="form-control" placeholder="例如: 1F-B-02">
                             </div>
                             <div class="form-group">
-                                <label>物料儲存狀態</label>
+                                <label>設備庫存狀態</label>
                                 <select id="tx-status" class="form-control">
                                     <option value="正常">正常</option>
                                     <option value="待修">待修</option>
@@ -1188,7 +1188,7 @@
                         </div>
                         
                         <div style="margin-top: 15px;">
-                            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">物料實盤狀態</label>
+                            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px;">設備實盤狀態</label>
                             <select id="st-mob-real-status" class="form-control">
                                 <option value="正常">正常</option>
                                 <option value="待驗">待驗</option>
@@ -1336,40 +1336,31 @@
         </div>
     </div>
 
-    <!-- 新增物料 Modal -->
+    <!-- 新增屬性欄位 Modal -->
     <div id="modal-add-material" class="modal-overlay" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 460px;">
             <div class="modal-header">
-                <h3><i data-lucide="box"></i> 新增雲端物料主檔</h3>
+                <h3><i data-lucide="sliders"></i> 新增庫存屬性欄位</h3>
                 <button class="btn-close" id="btn-close-add-mat">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="form-add-mat">
                     <div class="form-group">
-                        <label>機器種類 *</label>
-                        <input type="text" id="new-mat-type" class="form-control" required placeholder="例如: 筆記型電腦, 印表機, 伺服器">
+                        <label>欄位名稱 * (例如: 品牌, 種類, 配件類型)</label>
+                        <input type="text" id="new-opt-name" class="form-control" required placeholder="請輸入欄位名稱">
                     </div>
                     <div class="form-group">
-                        <label>品牌 *</label>
-                        <input type="text" id="new-mat-brand" class="form-control" required placeholder="例如: Apple, ASUS, Dell">
+                        <label>欄位填寫規則 *</label>
+                        <select id="new-opt-required" class="form-control" required>
+                            <option value="true">必選 (出入庫時必須選擇)</option>
+                            <option value="false">可選 (出入庫時為非必填)</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>型號 (可選)</label>
-                        <input type="text" id="new-mat-model" class="form-control" placeholder="例如: MacBook Pro, ExpertBook">
+                        <label>初始可選項目 (選填，多個項目請以英文逗號「,」分隔)</label>
+                        <input type="text" id="new-opt-values" class="form-control" placeholder="例如: Apple, ASUS, Dell">
                     </div>
-                    <div class="form-group">
-                        <label>規格描述 (可選)</label>
-                        <input type="text" id="new-mat-spec" class="form-control" placeholder="例如: 16G/512G">
-                    </div>
-                    <div class="form-group">
-                        <label>預設庫存數量 * (必選)</label>
-                        <input type="number" id="new-mat-qty" class="form-control" required placeholder="例如: 1" value="1" min="1">
-                    </div>
-                    <div class="form-group">
-                        <label>計量單位 * (必選)</label>
-                        <input type="text" id="new-mat-unit" class="form-control" required placeholder="例如: 台, 個" value="台">
-                    </div>
-                    <button type="submit" class="btn btn-success" style="width: 100%; height: 42px; margin-top: 15px;">建立雲端機器種類</button>
+                    <button type="submit" class="btn btn-success" style="width: 100%; height: 42px; margin-top: 15px;">建立屬性欄位</button>
                 </form>
             </div>
         </div>
