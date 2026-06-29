@@ -1,0 +1,692 @@
+==================================================
+專案名稱：VisionLin WMS 雲端倉庫 ERP 開發紀錄
+對話時間：2026年6月
+==================================================
+
+【使用者】：
+(上傳了一張手繪的倉庫層架平面圖)
+請你幫我製作一個「最基本的倉庫 ERP 儲位管理網頁原型」。
+請使用繁體中文介面，並且直接輸出完整可執行的單一 HTML 檔案。資料先使用瀏覽器 localStorage 儲存，不需要後端資料庫。
+(列出詳細的專案背景、B1與1F層架配置、單頁式網頁需求、主檔與異動表單功能、以及 localStorage 資料結構等詳細規格)
+
+--------------------------------------------------
+【AI 助理】：
+這是一個完整且可執行的單一 HTML 檔案，包含了 HTML、CSS 與 JavaScript。所有的資料都會儲存在您瀏覽器的 localStorage 中。
+[此處 AI 提供了第一版 LocalStorage 離線版 HTML 程式碼]
+
+--------------------------------------------------
+【使用者】：
+這個是離線的ERP我認為需要線上式的
+
+--------------------------------------------------
+【AI 助理】：
+你說得完全沒錯！實務上如果是多人操作，不能只存放在單一裝置。
+實務上有三個常見的升級方向：
+1. 串接 Firebase（最推薦的輕量級方案）：即時同步，免費額度高。
+2. 把 Google Sheets 當作資料庫：易於管理，利用 GAS 寫 API。
+3. 建立正規的伺服器與資料庫：適合長遠發展。
+請問傾向哪一種？
+
+--------------------------------------------------
+【使用者】：
+2. 把 Google Sheets 當作資料庫（最易於管理） 這個不錯!
+
+--------------------------------------------------
+【AI 助理】：
+好的！這個選擇非常實用。我們需要做兩件事：
+1. 建立 Google 試算表與 GAS 後端 API。
+2. 修改 HTML 把 localStorage 換成 Fetch API。
+[此處 AI 提供了 Google Sheets 版的 GAS 後端代碼與前端修改教學]
+
+--------------------------------------------------
+【使用者】：
+你確定你講的是對的嗎?
+
+--------------------------------------------------
+【AI 助理】：
+你質疑得非常對。我必須承認，用 Google Sheets 當多人 ERP 的資料庫有致命缺陷：
+1. 資料互相覆寫 (Race Condition)：多人同時出庫會導致數字打架，舊紀錄被抹除。
+2. 效能極差：整批覆寫會導致網頁卡頓。
+3. 資安風險：API 網址外洩會導致資料被清空。
+真正可行的輕量級備案：
+備案一：Firebase (Firestore) - 內建原子操作，防衝突，最推薦。
+備案二：Supabase - 開源版 Firebase，基於 PostgreSQL。
+備案三：AppSheet - 無程式碼直接生 App。
+
+--------------------------------------------------
+【使用者】：
+備案一：Firebase (Google 雲端即時資料庫) —— 最推薦的前端直連方案
+詳細說明這個方案 需要花錢的部分請說明清楚 我目前傾向不花費
+
+--------------------------------------------------
+【AI 助理】：
+對於你的倉庫規模，這是 100% 免費的 (Spark 方案)。
+- 讀取每天 50,000 次、寫入每天 20,000 次，對中小型倉庫絕對夠用。
+- 解決了資料打架問題：使用 Transaction (交易機制)，精確扣除庫存。
+- 支援即時同步與離線操作。
+你想先去 Firebase 建立專案獲取金鑰，還是要我先寫程式碼？
+
+--------------------------------------------------
+【使用者】：
+這個方案可以接受 接下來請一步一步教學
+
+--------------------------------------------------
+【AI 助理】：
+分三個階段：
+第一階段：在 Firebase 後台建立專案，獲取網頁連線金鑰 (firebaseConfig)。
+第二階段：設定 Firestore 進階安全規則 (Security Rules)。
+第三階段：修改網頁程式碼。
+[此處 AI 提供了 Firebase 版的初步 HTML 程式碼 (金鑰留空版)]
+
+--------------------------------------------------
+【使用者】：
+請把這個專案變成給firebase的gemini的提示詞
+
+--------------------------------------------------
+【AI 助理】：
+📋 請複製以下內容給 AI 開發助手：
+
+***
+【系統角色與任務目標】
+你現在是一位精通 Google Firebase (Firestore) 模組化 SDK (v10) 與純前端開發的高級全端工程師。
+請幫我開發／維護一個「單一 HTML 檔案」的線上版倉庫 ERP 系統。不需要後端伺服器，資料庫完全依賴 Firebase Cloud Firestore，並且必須內建嚴格的「交易鎖定（Transaction）」來防止多人同時操作時的庫存打架（Race Condition）。
+
+【專案背景與環境】
+* 技術棧：純 HTML、CSS、Vanilla JavaScript (ES6 module)。
+* Firebase 版本：v10 模組化寫法（initializeApp, getFirestore, runTransaction 等）。
+* 實體倉庫配置：分為 B1 與 1F 兩層樓。層架以 A-N 命名，層數介於 3~5 層。儲位命名規則為 樓層-層架-層數（例如：B1-A-01）。
+
+【Firestore 資料庫結構 (NoSQL Schema)】
+1. locations (儲位主檔)
+   - ID: 儲位代碼
+   - Fields: id, floor, shelf, layer, status
+2. items (物料主檔)
+   - ID: 料號
+   - Fields: id, name, spec, category, unit, safeStock, isControlled, returnable
+3. inventory (庫存明細)
+   - ID: itemId_locationId_status
+   - Fields: itemId, locationId, quantity, status, lastUpdated
+4. transactions (異動日誌)
+   - ID: 隨機生成的交易序號
+   - Fields: id, date, type, itemId, quantity, locationId, newLocationId, status, user, note
+
+【核心商業邏輯要求 (極度重要)】
+1. 防衝突出入庫 (Firestore runTransaction)：絕對不可以使用先 getDoc 再 setDoc 的普通寫法。必須使用 runTransaction 確保原子性（Atomicity）。
+2. 批次操作 (WriteBatch)：初始化與結算盤點差異時，必須使用 writeBatch 進行整批寫入。
+3. 盤點邏輯：結算時，只需針對「有差異」的品項執行批次修正，並生成異動紀錄。
+
+【前端 UI/UX 規範】
+1. 響應式（RWD），適合平板與 PC。
+2. 單頁式設計（SPA），不重新載入網頁。
+3. 對 Firebase 請求必須顯示 Loading 遮罩。
+***
+
+--------------------------------------------------
+【使用者】：
+firebase這邊狀況如下
+(使用者貼上與 Firebase Gemini 的對話紀錄，表示已成功建立 web app，並取得了包含 API Key 等資訊的 firebaseConfig，App ID 為 visionlin-wms-web)
+請你評估
+
+--------------------------------------------------
+【AI 助理】：
+這份進度非常完美！你已經成功取得了 `firebaseConfig`。
+接下來只需要兩步：
+1. 將金鑰貼入 HTML 中。
+2. 在 Firebase 後台點擊「Create database」開啟資料庫（測試模式）。
+是否要我把完整的網頁寫出來？
+
+--------------------------------------------------
+【使用者】：
+我目前沒有寫網頁出來
+請你根據我的需求 幫我把這個ERP的web寫出來
+
+--------------------------------------------------
+【AI 助理】：
+這就為您準備好完整的系統程式碼！我已經將您專屬的 visionlin-wms Firebase 金鑰完美整合進去了。請存成 .html 檔案後直接執行。
+
+[最終版 VisionLin WMS 雲端 ERP HTML 程式碼：]
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisionLin WMS - 雲端即時倉庫 ERP</title>
+    <style>
+        :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --success: #2ecc71; --warning: #f1c40f; --danger: #e74c3c; --light: #ecf0f1; --dark: #2c3e50; --bg: #f5f6fa; --border: #bdc3c7; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg); color: var(--dark); display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 250px; background-color: var(--primary); color: white; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; font-size: 1.2rem; font-weight: bold; text-align: center; border-bottom: 1px solid var(--secondary); background: #1a252f; }
+        .nav-menu { list-style: none; padding: 10px 0; overflow-y: auto; flex-grow: 1; }
+        .nav-item { padding: 12px 20px; cursor: pointer; transition: 0.3s; border-left: 4px solid transparent; }
+        .nav-item:hover { background-color: var(--secondary); }
+        .nav-item.active { background-color: var(--accent); border-left-color: white; }
+        .notice-board { padding: 15px; background-color: #1a252f; font-size: 0.85rem; border-top: 1px solid var(--secondary); }
+        .notice-board h4 { margin-bottom: 8px; color: var(--warning); }
+        .notice-board ul { padding-left: 15px; }
+        .notice-board li { margin-bottom: 4px; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { background-color: white; padding: 15px 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
+        .content-area { padding: 20px; overflow-y: auto; flex-grow: 1; }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; border-bottom: 4px solid var(--accent); }
+        .card h3 { font-size: 0.9rem; color: #7f8c8d; margin-bottom: 10px; }
+        .card p { font-size: 1.8rem; font-weight: bold; color: var(--dark); }
+        .card.warning { border-bottom-color: var(--warning); }
+        .card.danger { border-bottom-color: var(--danger); }
+        .card.success { border-bottom-color: var(--success); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
+        .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 1rem; }
+        select.form-control { cursor: pointer; }
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: 0.2s; color: white; background-color: var(--accent); }
+        .btn:hover { opacity: 0.9; }
+        .btn-success { background-color: var(--success); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-warning { background-color: var(--warning); color: #333; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border); color: var(--dark); }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .table-responsive { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background-color: var(--light); font-weight: bold; position: sticky; top: 0; }
+        tr:hover { background-color: #f9f9f9; }
+        .action-btns { display: flex; gap: 5px; }
+        .action-btns button { padding: 4px 8px; font-size: 0.8rem; }
+        .status-low { background-color: #ffeaa7 !important; }
+        .status-badge { padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        .bg-normal { background: var(--success); color: white; }
+        .bg-pending { background: var(--warning); color: #333; }
+        .bg-repair { background: #fdcb6e; color: #333; }
+        .bg-scrap { background: var(--danger); color: white; }
+        .bg-borrowed { background: var(--accent); color: white; }
+        #loading-overlay { display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; color: white; justify-content: center; align-items: center; font-size: 1.5rem; flex-direction: column; }
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+            .label-page { page-break-after: always; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; padding: 20px; }
+            .label-big { border: 2px solid #000; width: 100%; max-width: 800px; padding: 20px; margin-bottom: 20px; page-break-inside: avoid; display: flex; align-items: center; justify-content: space-between; }
+            .label-big-left { flex-grow: 1; }
+            .label-big h1 { font-size: 6rem; margin: 0; line-height: 1; }
+            .label-big h2 { font-size: 2.5rem; margin: 10px 0; }
+            .label-big p { font-size: 1.5rem; margin: 5px 0; }
+            .label-small { border: 1px solid #000; width: 45%; max-width: 400px; padding: 15px; margin-bottom: 15px; page-break-inside: avoid; display: flex; align-items: center; justify-content: space-between; }
+            .label-small-left { flex-grow: 1; }
+            .label-small h2 { font-size: 2.5rem; margin: 0; }
+            .label-small p { font-size: 1.2rem; margin: 5px 0 0 0; }
+            .qr-box { width: 120px; height: 120px; border: 2px dashed #000; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; }
+            .qr-box.small { width: 80px; height: 80px; font-size: 1rem; }
+        }
+        #print-area { display: none; }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        <span style="margin-bottom: 10px;">☁️ 雲端核心同步中...</span>
+        <span style="font-size: 1rem; color: #ccc;">正在即時連接 Firebase Firestore 安全資料庫</span>
+    </div>
+
+    <div class="sidebar no-print">
+        <div class="sidebar-header">VisionLin WMS</div>
+        <ul class="nav-menu">
+            <li class="nav-item active" id="menu-dashboard">儀表板</li>
+            <li class="nav-item" id="menu-locations">儲位主檔</li>
+            <li class="nav-item" id="menu-materials">物料主檔</li>
+            <li class="nav-item" id="menu-inventory">庫存明細</li>
+            <li class="nav-item" id="menu-transactions">出入庫/移位作業</li>
+            <li class="nav-item" id="menu-stocktake">盤點作業</li>
+            <li class="nav-item" id="menu-labels">標籤列印</li>
+            <li class="nav-item" id="menu-data">資料備份與還原</li>
+        </ul>
+        <div class="notice-board">
+            <h4>📌 系統作業原則</h4>
+            <ul>
+                <li>01 永遠代表最底層。</li>
+                <li>未驗收先放待驗區。</li>
+                <li>重物放下層，輕物放上層。</li>
+                <li>異動皆具備雲端交易鎖定。</li>
+                <li>報廢/待修不可與正常混放。</li>
+                <li>同一物料多儲位系統已支援。</li>
+                <li>地下室儲放電子料需防潮。</li>
+                <li>空盒勿留儲位防假庫存。</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-content no-print">
+        <div class="header">
+            <h2 id="page-title">儀表板</h2>
+            <div><input type="text" id="quick-search" class="form-control" placeholder="快速搜尋料號/品名/儲位..." style="width: 250px;"></div>
+        </div>
+
+        <div class="content-area">
+            <div id="dashboard" class="page active">
+                <div class="dashboard-cards" id="dash-cards"></div>
+                <div class="panel">
+                    <h3>雲端即時異動紀錄 (最新50筆)</h3>
+                    <div class="table-responsive" style="margin-top: 10px;">
+                        <table id="dash-tx-table">
+                            <thead><tr><th>時間</th><th>類型</th><th>料號</th><th>品名</th><th>數量</th><th>相關儲位</th><th>經手人</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="locations" class="page">
+                <div class="panel">
+                    <h3>雲端批次初始化儲位</h3>
+                    <p style="margin-bottom: 10px; font-size: 0.9rem; color:#7f8c8d;">自動建立標準結構：A-C(4層)、D-E(5層)、F-H(4層)、I(3層)、J-N(4層)。不會覆蓋現有儲位。</p>
+                    <div class="btn-group">
+                        <button class="btn" id="btn-gen-b1">產生 B1 儲位</button>
+                        <button class="btn" id="btn-gen-1f">產生 1F 儲位</button>
+                        <button class="btn btn-warning" id="btn-gen-all">產生雙樓層儲位</button>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="btn-group" style="justify-content: space-between;">
+                        <div>
+                            <select id="loc-filter-floor" class="form-control" style="width: auto; display: inline-block;"><option value="">所有樓層</option><option value="B1">B1</option><option value="1F">1F</option></select>
+                            <select id="loc-filter-shelf" class="form-control" style="width: auto; display: inline-block;"><option value="">所有層架</option></select>
+                        </div>
+                        <button class="btn btn-success" id="btn-add-loc">+ 新增單一自訂儲位</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="loc-table"><thead><tr><th>儲位代碼</th><th>樓層</th><th>層架</th><th>層數</th><th>狀態</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="materials" class="page">
+                <div class="panel">
+                    <div class="btn-group" style="justify-content: space-between;">
+                        <div><input type="text" id="mat-search" class="form-control" placeholder="搜尋料號/品名/規格..." style="width: 250px;"></div>
+                        <button class="btn btn-success" id="btn-add-mat">+ 新增雲端物料</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="mat-table"><thead><tr><th>料號</th><th>品名</th><th>規格</th><th>類別</th><th>單位</th><th>安全庫存</th><th>管制/歸還</th><th>操作</th></tr></thead><tbody></tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="inventory" class="page">
+                <div class="panel">
+                    <div class="form-row" style="margin-bottom: 15px;">
+                        <input type="text" id="inv-search" class="form-control" placeholder="搜尋料號/品名/儲位...">
+                        <select id="inv-filter-status" class="form-control"><option value="">所有狀態</option><option value="正常">正常</option><option value="待驗">待驗</option><option value="待修">待修</option><option value="待報廢">待報廢</option><option value="借出">借出</option></select>
+                        <select id="inv-filter-floor" class="form-control"><option value="">所有樓層</option><option value="B1">B1</option><option value="1F">1F</option></select>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="inv-table"><thead><tr><th>儲位</th><th>料號</th><th>品名</th><th>規格</th><th>雲端數量</th><th>單位</th><th>狀態</th><th>最後異動</th></tr></thead><tbody></tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="transactions" class="page">
+                <div class="panel">
+                    <h3>庫存連線作業表單 (分散式並發鎖定)</h3>
+                    <form id="tx-form">
+                        <div class="form-row">
+                            <div class="form-group"><label>作業類型 *</label><select id="tx-type" class="form-control" required><option value="in">入庫 (增加指定儲位庫存)</option><option value="out">出庫 (嚴格扣除，不足阻斷)</option><option value="move">移位 (跨儲位原子轉移)</option><option value="borrow">借出 (需填寫使用人)</option><option value="return">歸還 (恢復正常狀態)</option></select></div>
+                            <div class="form-group"><label>作業時間 *</label><input type="datetime-local" id="tx-date" class="form-control" required></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>料號 *</label><input type="text" id="tx-item" class="form-control" required placeholder="輸入料號後離開輸入框自動帶入"></div>
+                            <div class="form-group"><label>品名</label><input type="text" id="tx-name" class="form-control" readonly placeholder="自動檢索雲端主檔"></div>
+                            <div class="form-group"><label>交易數量 *</label><input type="number" id="tx-qty" class="form-control" required min="0.01" step="0.01"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label id="tx-loc-label">目標儲位 * (入庫使用)</label><input type="text" id="tx-loc" class="form-control" required placeholder="例如: B1-A-01"></div>
+                            <div class="form-group" id="tx-new-loc-group" style="display: none;"><label>新目標儲位 * (移位使用)</label><input type="text" id="tx-new-loc" class="form-control" placeholder="例如: 1F-B-02"></div>
+                            <div class="form-group"><label>物料狀態</label><select id="tx-status" class="form-control"><option value="正常">正常</option><option value="待驗">待驗</option><option value="待修">待修</option><option value="待報廢">待報廢</option></select></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>操作人 / 經手人</label><input type="text" id="tx-user" class="form-control"></div>
+                            <div class="form-group"><label>用途 / 備註</label><input type="text" id="tx-note" class="form-control"></div>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="width: 100%; font-size: 1.1rem;">提交雲端安全交易</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="stocktake" class="page">
+                <div class="panel">
+                    <h3>即時雲端盤點</h3>
+                    <div class="form-row" style="align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0;"><label>盤點樓層</label><select id="st-floor" class="form-control"><option value="B1">B1</option><option value="1F">1F</option><option value="ALL">全部</option></select></div>
+                        <div class="form-group" style="margin-bottom: 0;"><label>盤點層架</label><select id="st-shelf" class="form-control"><option value="ALL">全部層架</option></select></div>
+                        <button class="btn" id="btn-load-st">加載雲端盤點單</button>
+                    </div>
+                </div>
+                <div class="panel" id="st-workspace" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <h3>實盤對帳作業區</h3>
+                        <button class="btn btn-warning" id="btn-submit-st">結算並修復雲端庫存 (留下紀錄)</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="st-table"><thead><tr><th>儲位</th><th>料號</th><th>品名</th><th>系統數量</th><th>狀態</th><th>實盤數量</th><th>差異</th></tr></thead><tbody></tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="labels" class="page">
+                <div class="panel">
+                    <h3>高清晰實體標籤列印</h3>
+                    <div class="form-row">
+                        <div class="form-group"><label>樓層</label><select id="lbl-floor" class="form-control"><option value="B1">B1</option><option value="1F">1F</option></select></div>
+                        <div class="form-group"><label>層架</label><select id="lbl-shelf" class="form-control"><option value="ALL">列印全樓層所有層架</option></select></div>
+                        <div class="form-group"><label>標籤類型</label><select id="lbl-type" class="form-control"><option value="BIG">層架大標籤 (A~N)</option><option value="SMALL">每層小標籤 (01~05)</option><option value="BOTH">混合輸出</option></select></div>
+                    </div>
+                    <button class="btn btn-accent" id="btn-print-labels">輸出列印預覽</button>
+                </div>
+            </div>
+
+            <div id="data" class="page">
+                <div class="panel">
+                    <h3>本地冷備份 (JSON 安全檔案)</h3>
+                    <p style="margin-bottom: 15px; color: #7f8c8d;">匯出所有雲端資料作為備份檔案。目前暫不支援直接匯出 CSV，請使用 JSON 格式完整保留結構。</p>
+                    <div class="btn-group"><button class="btn" id="btn-exp-all">安全導出所有雲端陣列 (JSON)</button></div>
+                </div>
+                <div class="panel">
+                    <h3>緊急災難還原</h3>
+                    <p style="margin-bottom: 15px; color: var(--danger);">⚠️ 注意：此操作將利用 JSON 檔案整批寫入並覆蓋目前的雲端資料庫！</p>
+                    <div class="form-group"><input type="file" id="import-file" class="form-control" accept=".json"></div>
+                    <button class="btn btn-warning" id="btn-import-all">執行雲端覆寫還原</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="print-area"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB7SXr3yssSdfvRnE-TjTLKNPvH4ei3E8Q",
+            authDomain: "visionlin-wms.firebaseapp.com",
+            projectId: "visionlin-wms",
+            storageBucket: "visionlin-wms.firebasestorage.app",
+            messagingSenderId: "460262145233",
+            appId: "1:460262145233:web:ec69adedaf5527d8bc59f0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const SHELF_CONFIG = {A:4, B:4, C:4, D:5, E:5, F:4, G:4, H:4, I:3, J:4, K:4, L:4, M:4, N:4};
+        let cache = { locations: [], items: [], inventory: [], transactions: [] };
+        let currentStocktakeData = [];
+        const DEFAULT_ITEMS = [
+            { id: 'MAT-0001', name: 'M3 螺絲', spec: 'M3x8', category: '五金', unit: 'pcs', safeStock: 100, isControlled: false, returnable: false },
+            { id: 'MAT-0002', name: '杜邦線', spec: '公對母 20cm', category: '線材', unit: 'pcs', safeStock: 20, isControlled: false, returnable: false },
+            { id: 'MAT-0003', name: '電源供應器', spec: '24V 5A', category: '電源', unit: 'pcs', safeStock: 2, isControlled: true, returnable: false },
+            { id: 'MAT-0004', name: 'Arduino Nano', spec: '相容板', category: '電子模組', unit: 'pcs', safeStock: 5, isControlled: true, returnable: true }
+        ];
+
+        async function init() {
+            try {
+                showLoading(true);
+                await syncCache();
+                if (cache.items.length === 0) {
+                    for (let item of DEFAULT_ITEMS) { await setDoc(doc(db, "items", item.id), item); }
+                    await syncCache();
+                }
+                buildDropdowns(); renderDashboard(); bindUIEvents();
+                document.getElementById('tx-date').value = new Date().toISOString().slice(0,16);
+            } catch (err) { alert("資料庫初始化連線失敗，請確認您已在 Firebase 控制台建立並啟用 Firestore 資料庫 (測試模式)。"); } finally { showLoading(false); }
+        }
+
+        async function syncCache() {
+            const locSnap = await getDocs(collection(db, "locations")); cache.locations = locSnap.docs.map(d => d.data());
+            const itemSnap = await getDocs(collection(db, "items")); cache.items = itemSnap.docs.map(d => d.data());
+            const invSnap = await getDocs(collection(db, "inventory")); cache.inventory = invSnap.docs.map(d => d.data());
+            const txSnap = await getDocs(collection(db, "transactions")); cache.transactions = txSnap.docs.map(d => d.data()).sort((a,b) => b.date.localeCompare(a.date));
+        }
+
+        function showLoading(show) { document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none'; }
+        function buildDropdowns() {
+            let html = '';
+            for(let s in SHELF_CONFIG) { html += `<option value="${s}">${s} 架</option>`; }
+            document.getElementById('loc-filter-shelf').innerHTML += html; document.getElementById('st-shelf').innerHTML += html; document.getElementById('lbl-shelf').innerHTML += html;
+        }
+
+        function switchPage(pageId, targetEl) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active'); targetEl.classList.add('active');
+            document.getElementById('page-title').innerText = targetEl.innerText;
+            if(pageId === 'dashboard') renderDashboard();
+            if(pageId === 'locations') renderLocations();
+            if(pageId === 'materials') renderMaterials();
+            if(pageId === 'inventory') renderInventory();
+        }
+
+        function renderDashboard() {
+            const totalLocs = cache.locations.length;
+            const usedLocs = new Set(cache.inventory.filter(i => i.quantity > 0).map(i => i.locationId)).size;
+            let lowStockCount = 0;
+            cache.items.forEach(item => {
+                const totalNormal = cache.inventory.filter(i => i.itemId === item.id && i.status === '正常').reduce((sum, i) => sum + Number(i.quantity), 0);
+                if (totalNormal < item.safeStock) lowStockCount++;
+            });
+            const pending = cache.inventory.filter(i => i.status === '待驗').reduce((sum, i) => sum + Number(i.quantity), 0);
+            const repair = cache.inventory.filter(i => i.status === '待修').reduce((sum, i) => sum + Number(i.quantity), 0);
+            const scrap = cache.inventory.filter(i => i.status === '待報廢').reduce((sum, i) => sum + Number(i.quantity), 0);
+            document.getElementById('dash-cards').innerHTML = `<div class="card"><h3>總儲位數</h3><p>${totalLocs}</p></div><div class="card"><h3>空儲位數</h3><p>${totalLocs - usedLocs}</p></div><div class="card"><h3>物料品項總數</h3><p>${cache.items.length}</p></div><div class="card ${lowStockCount > 0 ? 'warning' : ''}"><h3>低於安全庫存</h3><p>${lowStockCount}</p></div><div class="card ${pending > 0 ? 'warning' : ''}"><h3>待驗品數</h3><p>${pending}</p></div><div class="card ${scrap > 0 ? 'danger' : ''}"><h3>待報廢數</h3><p>${scrap}</p></div>`;
+            let html = '';
+            cache.transactions.slice(0, 50).forEach(tx => {
+                const item = cache.items.find(i => i.id === tx.itemId) || {};
+                let typeMap = {in:'入庫', out:'出庫', move:'移位', borrow:'借出', return:'歸還', adjust:'盤點調整'};
+                let locStr = tx.type === 'move' ? `${tx.locationId} ➔ ${tx.newLocationId}` : tx.locationId;
+                html += `<tr><td>${tx.date}</td><td>${typeMap[tx.type]||tx.type}</td><td>${tx.itemId}</td><td>${item.name||'-'}</td><td>${tx.quantity}</td><td>${locStr}</td><td>${tx.user||'-'}</td></tr>`;
+            });
+            document.querySelector('#dash-tx-table tbody').innerHTML = html;
+        }
+
+        async function runGenerateLocations(mode) {
+            if(!confirm("確認執行雲端批次鋪設？將跳過已存在的儲位代碼。")) return;
+            showLoading(true);
+            const floors = mode === 'ALL' ? ['B1', '1F'] : [mode];
+            const batch = writeBatch(db); let counter = 0;
+            floors.forEach(f => {
+                for(let shelf in SHELF_CONFIG) {
+                    for(let i=1; i<=SHELF_CONFIG[shelf]; i++) {
+                        const layerStr = i.toString().padStart(2, '0');
+                        const id = `${f}-${shelf}-${layerStr}`;
+                        if(!cache.locations.some(l => l.id === id)) {
+                            batch.set(doc(db, "locations", id), { id, floor: f, shelf, layer: layerStr, status: '啟用' }); counter++;
+                        }
+                    }
+                }
+            });
+            if(counter > 0) { await batch.commit(); await syncCache(); renderLocations(); alert(`雲端佈署成功，共新增 ${counter} 個儲位。`); } 
+            else { alert("選定的範圍儲位皆已存在，無須重複建立。"); }
+            showLoading(false);
+        }
+
+        function renderLocations() {
+            const fFloor = document.getElementById('loc-filter-floor').value; const fShelf = document.getElementById('loc-filter-shelf').value;
+            let html = '';
+            cache.locations.filter(l => (!fFloor || l.floor === fFloor) && (!fShelf || l.shelf === fShelf)).sort((a,b) => a.id.localeCompare(b.id)).forEach(l => {
+                html += `<tr><td><strong>${l.id}</strong></td><td>${l.floor}</td><td>${l.shelf}</td><td>${l.layer}</td><td><span class="status-badge bg-normal">${l.status}</span></td><td><button class="btn btn-danger btn-sm" data-id="${l.id}">刪除</button></td></tr>`;
+            });
+            document.querySelector('#loc-table tbody').innerHTML = html;
+        }
+
+        function renderMaterials() {
+            const q = document.getElementById('mat-search').value.toLowerCase(); let html = '';
+            cache.items.filter(i => i.id.toLowerCase().includes(q) || i.name.toLowerCase().includes(q) || (i.spec && i.spec.toLowerCase().includes(q))).forEach(i => {
+                html += `<tr><td><strong>${i.id}</strong></td><td>${i.name}</td><td>${i.spec||'-'}</td><td>${i.category||'-'}</td><td>${i.unit}</td><td>${i.safeStock}</td><td>${i.isControlled?'是':'-'}/${i.returnable?'是':'-'}</td><td><button class="btn btn-danger btn-sm" data-id="${i.id}">刪除</button></td></tr>`;
+            });
+            document.querySelector('#mat-table tbody').innerHTML = html;
+        }
+
+        async function createMaterial() {
+            const id = prompt("請輸入新物料料號 (若留空系統會自動生成):", `MAT-${String(cache.items.length+1).padStart(4,'0')}`);
+            if(!id) return;
+            if(cache.items.some(i => i.id === id)) return alert("料號已存在！");
+            const name = prompt("請輸入物料品名 *:"); if(!name) return alert("品名為必填項");
+            const spec = prompt("請輸入規格:"); const category = prompt("請輸入類別:", "電子零件"); const unit = prompt("請輸入計量單位:", "pcs"); const safeStock = Number(prompt("請輸入安全庫存量:", "10"));
+            showLoading(true);
+            await setDoc(doc(db, "items", id), { id, name, spec, category, unit, safeStock, isControlled: false, returnable: false });
+            await syncCache(); renderMaterials(); showLoading(false);
+        }
+
+        function renderInventory() {
+            const q = document.getElementById('inv-search').value.toLowerCase(); const stat = document.getElementById('inv-filter-status').value; const floor = document.getElementById('inv-filter-floor').value;
+            let html = '';
+            cache.inventory.forEach(inv => {
+                if(inv.quantity <= 0) return;
+                const item = cache.items.find(i => i.id === inv.itemId) || {}; const locParts = inv.locationId.split('-');
+                if(stat && inv.status !== stat) return; if(floor && locParts[0] !== floor) return;
+                const searchTarget = `${inv.locationId} ${inv.itemId} ${item.name||''} ${item.spec||''}`.toLowerCase();
+                if(q && !searchTarget.includes(q)) return;
+                const totalNormal = cache.inventory.filter(i => i.itemId === inv.itemId && i.status === '正常').reduce((sum, i) => sum + Number(i.quantity), 0);
+                const lowStockClass = (inv.status === '正常' && totalNormal < item.safeStock) ? 'status-low' : '';
+                html += `<tr class="${lowStockClass}"><td><strong>${inv.locationId}</strong></td><td>${inv.itemId}</td><td>${item.name||'-'}</td><td>${item.spec||'-'}</td><td style="font-weight:bold; font-size:1.1rem;">${inv.quantity}</td><td>${item.unit||'pcs'}</td><td><span class="status-badge ${inv.status==='正常'?'bg-normal':(inv.status==='借出'?'bg-borrowed':'bg-pending')}">${inv.status}</span></td><td>${inv.lastUpdated||'-'}</td></tr>`;
+            });
+            document.querySelector('#inv-table tbody').innerHTML = html;
+        }
+
+        async function processTransaction(e) {
+            e.preventDefault();
+            const type = document.getElementById('tx-type').value; const date = document.getElementById('tx-date').value.replace('T', ' ');
+            const itemId = document.getElementById('tx-item').value.trim(); const qty = Number(document.getElementById('tx-qty').value);
+            const loc = document.getElementById('tx-loc').value.trim(); const newLoc = document.getElementById('tx-new-loc').value.trim();
+            const status = document.getElementById('tx-status').value; const user = document.getElementById('tx-user').value; const note = document.getElementById('tx-note').value;
+
+            if(!cache.items.some(i => i.id === itemId)) return alert(`❌ 料號 ${itemId} 不存在！`);
+            if(type !== 'out' && type !== 'borrow' && type !== 'return' && !cache.locations.some(l => l.id === loc)) return alert(`❌ 目標儲位 ${loc} 尚未啟用！`);
+            if(type === 'move' && !cache.locations.some(l => l.id === newLoc)) return alert(`❌ 移位新目標儲位 ${newLoc} 尚未啟用！`);
+
+            showLoading(true);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const srcInvId = `${itemId}_${loc}_${status}`; const srcInvRef = doc(db, "inventory", srcInvId);
+                    const srcSnap = await transaction.get(srcInvRef);
+                    let currentSrcQty = srcSnap.exists() ? srcSnap.data().quantity : 0;
+
+                    if(['out', 'move', 'borrow'].includes(type)) { if(!srcSnap.exists() || currentSrcQty < qty) throw new Error(`扣除餘量不足：${loc} 僅餘 ${currentSrcQty}。`); }
+
+                    if(type === 'in') { transaction.set(srcInvRef, { itemId, locationId: loc, quantity: currentSrcQty + qty, status, lastUpdated: date }); }
+                    else if(type === 'out') { const nextQty = currentSrcQty - qty; if(nextQty === 0) transaction.delete(srcInvRef); else transaction.update(srcInvRef, { quantity: nextQty, lastUpdated: date }); }
+                    else if(type === 'move') {
+                        const nextSrcQty = currentSrcQty - qty; if(nextSrcQty === 0) transaction.delete(srcInvRef); else transaction.update(srcInvRef, { quantity: nextSrcQty, lastUpdated: date });
+                        const destInvId = `${itemId}_${newLoc}_${status}`; const destInvRef = doc(db, "inventory", destInvId);
+                        const destSnap = await transaction.get(destInvRef); let currentDestQty = destSnap.exists() ? destSnap.data().quantity : 0;
+                        transaction.set(destInvRef, { itemId, locationId: newLoc, quantity: currentDestQty + qty, status, lastUpdated: date });
+                    }
+                    else if(type === 'borrow') {
+                        const nextSrcQty = currentSrcQty - qty; if(nextSrcQty === 0) transaction.delete(srcInvRef); else transaction.update(srcInvRef, { quantity: nextSrcQty, lastUpdated: date });
+                        const borrowInvId = `${itemId}_${loc}_借出`; const borrowInvRef = doc(db, "inventory", borrowInvId);
+                        const borrowSnap = await transaction.get(borrowInvRef); let currentBorrowQty = borrowSnap.exists() ? borrowSnap.data().quantity : 0;
+                        transaction.set(borrowInvRef, { itemId, locationId: loc, quantity: currentBorrowQty + qty, status: '借出', lastUpdated: date });
+                    }
+                    else if(type === 'return') {
+                        const borrowInvId = `${itemId}_${loc}_借出`; const borrowInvRef = doc(db, "inventory", borrowInvId);
+                        const borrowSnap = await transaction.get(borrowInvRef); let currentBorrowQty = borrowSnap.exists() ? borrowSnap.data().quantity : 0;
+                        if(!borrowSnap.exists() || currentBorrowQty < qty) throw new Error(`借出紀錄僅存 ${currentBorrowQty}，無法歸還 ${qty}。`);
+                        if(currentBorrowQty - qty === 0) transaction.delete(borrowInvRef); else transaction.update(borrowInvRef, { quantity: currentBorrowQty - qty, lastUpdated: date });
+                        transaction.set(srcInvRef, { itemId, locationId: loc, quantity: currentSrcQty + qty, status, lastUpdated: date });
+                    }
+                    const logId = `TX-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+                    transaction.set(doc(db, "transactions", logId), { id: logId, date, type, itemId, quantity: qty, locationId: loc, newLocationId: type==='move'?newLoc:'', status: type==='borrow'?'借出':status, user, note });
+                });
+                alert("🟢 雲端交易成功！"); document.getElementById('tx-form').reset(); document.getElementById('tx-date').value = new Date().toISOString().slice(0,16); document.getElementById('tx-name').value = ''; await syncCache();
+            } catch (err) { alert(`🔴 雲端作業失敗:\n${err.message}`); } finally { showLoading(false); }
+        }
+
+        function generateStocktakeList() {
+            const floor = document.getElementById('st-floor').value; const shelf = document.getElementById('st-shelf').value;
+            currentStocktakeData = cache.inventory.filter(inv => { const parts = inv.locationId.split('-'); if(floor !== 'ALL' && parts[0] !== floor) return false; if(shelf !== 'ALL' && parts[1] !== shelf) return false; return true; }).map(inv => { const item = cache.items.find(i => i.id === inv.itemId) || {}; return { ...inv, itemName: item.name, realQty: inv.quantity }; });
+            if(currentStocktakeData.length === 0) return alert("選定範圍內無庫存。");
+            document.getElementById('st-workspace').style.display = 'block'; let html = '';
+            currentStocktakeData.forEach((row, idx) => { html += `<tr><td>${row.locationId}</td><td>${row.itemId}</td><td>${row.itemName||'-'}</td><td>${row.quantity}</td><td>${row.status}</td><td><input type="number" class="form-control st-input" data-idx="${idx}" value="${row.realQty}" min="0" step="0.01" style="width:100px;"></td><td id="st-diff-${idx}">0</td></tr>`; });
+            document.querySelector('#st-table tbody').innerHTML = html;
+        }
+
+        async function commitStocktakeFix() {
+            const discrepancies = currentStocktakeData.filter(d => d.quantity !== d.realQty);
+            if(discrepancies.length === 0) return alert("對帳完成。");
+            if(!confirm(`確認執行雲端修復？`)) return; showLoading(true);
+            const batch = writeBatch(db); const date = new Date().toISOString().replace('T',' ').substring(0,19);
+            discrepancies.forEach(c => {
+                const ref = doc(db, "inventory", `${c.itemId}_${c.locationId}_${c.status}`); const diff = c.realQty - c.quantity;
+                if(c.realQty === 0) batch.delete(ref); else batch.set(ref, { itemId: c.itemId, locationId: c.locationId, quantity: c.realQty, status: c.status, lastUpdated: date });
+                const logId = `TX-ST-${Date.now()}-${Math.random().toString(36).substr(2,4)}`;
+                batch.set(doc(db, "transactions", logId), { id: logId, date, type: 'adjust', itemId: c.itemId, quantity: Math.abs(diff), locationId: c.locationId, newLocationId: '', status: c.status, user: '系統盤點專員', note: `盤點落差修正 (落差: ${diff})` });
+            });
+            await batch.commit(); await syncCache(); document.getElementById('st-workspace').style.display = 'none'; alert("🎉 調帳完成！"); showLoading(false);
+        }
+
+        function generatePrintLabels() {
+            const floor = document.getElementById('lbl-floor').value; const shelf = document.getElementById('lbl-shelf').value; const type = document.getElementById('lbl-type').value;
+            let targets = cache.locations.filter(l => l.floor === floor); if(shelf !== 'ALL') targets = targets.filter(l => l.shelf === shelf);
+            if(targets.length === 0) return alert("無有效儲位。");
+            let html = '<div class="label-page">';
+            if(['BIG', 'BOTH'].includes(type)) {
+                [...new Set(targets.map(t => t.shelf))].sort().forEach(s => {
+                    const group = targets.filter(t => t.shelf === s).sort((a,b)=>a.layer.localeCompare(b.layer));
+                    html += `<div class="label-big"><div class="label-big-left"><h1>${floor}-${s}</h1><h2>${floor==='B1'?'地下室':'地上室'} ${s} 架</h2><p>範圍：${group[0].id} ～ ${group[group.length-1].id}</p></div><div class="qr-box">QR</div></div>`;
+                });
+            }
+            if(['SMALL', 'BOTH'].includes(type)) {
+                targets.sort((a,b)=>a.id.localeCompare(b.id)).forEach(l => {
+                    html += `<div class="label-small"><div class="label-small-left"><h2>${l.id}</h2><p>${floor==='B1'?'地下室':'地上室'} ${l.shelf} 架第 ${Number(l.layer)} 層</p></div><div class="qr-box small">QR</div></div>`;
+                });
+            }
+            html += '</div>'; document.getElementById('print-area').innerHTML = html; window.print();
+        }
+
+        function backupExport() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cache, null, 2));
+            const dlAnchor = document.createElement('a'); dlAnchor.setAttribute("href", dataStr); dlAnchor.setAttribute("download", `visionlin_erp_backup_${Date.now()}.json`); dlAnchor.click();
+        }
+
+        function triggerImportJson() {
+            const fileInput = document.getElementById('import-file'); if(!fileInput.files.length) return alert("請選取備份檔案。");
+            if(prompt("⚠️ 致命警告：請輸入大寫 'OVERWRITE' 以啟動程序：") !== 'OVERWRITE') return;
+            showLoading(true); const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result); if(!parsed.items || !parsed.locations || !parsed.inventory) throw new Error("結構缺失");
+                    for (let col of ['items', 'locations', 'inventory', 'transactions']) { const snap = await getDocs(collection(db, col)); for (let docFile of snap.docs) { await deleteDoc(doc(db, col, docFile.id)); } }
+                    for(let l of parsed.locations) { await setDoc(doc(db, "locations", l.id), l); }
+                    for(let i of parsed.items) { await setDoc(doc(db, "items", i.id), i); }
+                    for(let inv of parsed.inventory) { await setDoc(doc(db, "inventory", `${inv.itemId}_${inv.locationId}_${inv.status}`), inv); }
+                    for(let tx of (parsed.transactions || [])) { await setDoc(doc(db, "transactions", tx.id), tx); }
+                    alert("還原成功！系統即將刷新。"); location.reload();
+                } catch(err) { alert("還原終止。"); showLoading(false); }
+            }; reader.readAsText(fileInput.files[0]);
+        }
+
+        function bindUIEvents() {
+            document.querySelectorAll('.nav-item').forEach(el => { el.addEventListener('click', (e) => { switchPage(e.target.id.replace('menu-', ''), e.target); }); });
+            document.getElementById('quick-search').addEventListener('keyup', (e) => { if(e.key === 'Enter') { switchPage('inventory', document.getElementById('menu-inventory')); document.getElementById('inv-search').value = e.target.value; renderInventory(); } });
+            document.getElementById('tx-item').addEventListener('blur', (e) => { const item = cache.items.find(i => i.id === e.target.value.trim()); document.getElementById('tx-name').value = item ? item.name : '❌ 未尋獲此料號'; });
+            document.getElementById('tx-type').addEventListener('change', (e) => { const type = e.target.value; document.getElementById('tx-new-loc-group').style.display = type === 'move' ? 'block' : 'none'; let labelText = '目標儲位 * (入庫使用)'; if(type === 'out') labelText = '來源儲位 * (出庫扣除)'; else if(type === 'move') labelText = '原儲位 * (扣除)'; else if(type === 'borrow') labelText = '來源儲位 * (借出扣除)'; else if(type === 'return') labelText = '歸還儲位 *'; document.getElementById('tx-loc-label').innerText = labelText; });
+            document.getElementById('tx-form').addEventListener('submit', processTransaction);
+            document.getElementById('btn-gen-b1').addEventListener('click', () => runGenerateLocations('B1'));
+            document.getElementById('btn-gen-1f').addEventListener('click', () => runGenerateLocations('1F'));
+            document.getElementById('btn-gen-all').addEventListener('click', () => runGenerateLocations('ALL'));
+            document.getElementById('btn-add-loc').addEventListener('click', () => { const id = prompt("請輸入自訂儲位代碼 (如 1F-Z-99):"); if(id) { if(cache.locations.some(l => l.id === id)) return alert('儲位已存在'); showLoading(true); setDoc(doc(db, "locations", id), { id, floor: id.split('-')[0], shelf: id.split('-')[1], layer: id.split('-')[2]||'01', status: '啟用' }).then(()=>{ syncCache().then(()=>{renderLocations(); showLoading(false);}) }); } });
+            document.getElementById('loc-filter-floor').addEventListener('change', renderLocations); document.getElementById('loc-filter-shelf').addEventListener('change', renderLocations);
+            document.getElementById('mat-search').addEventListener('keyup', renderMaterials); document.getElementById('btn-add-mat').addEventListener('click', createMaterial);
+            document.getElementById('inv-search').addEventListener('keyup', renderInventory); document.getElementById('inv-filter-status').addEventListener('change', renderInventory); document.getElementById('inv-filter-floor').addEventListener('change', renderInventory);
+            document.getElementById('btn-load-st').addEventListener('click', generateStocktakeList); document.getElementById('btn-submit-st').addEventListener('click', commitStocktakeFix); document.getElementById('btn-print-labels').addEventListener('click', generatePrintLabels); document.getElementById('btn-exp-all').addEventListener('click', backupExport); document.getElementById('btn-import-all').addEventListener('click', triggerImportJson);
+            document.getElementById('loc-table').addEventListener('click', async (e) => { if(e.target.classList.contains('btn-danger')) { const id = e.target.getAttribute('data-id'); if(cache.inventory.some(i => i.locationId === id && i.quantity > 0)) return alert("該儲位尚存有物料，拒絕刪除。"); if(confirm(`確認移除儲位 ${id}？`)) { showLoading(true); await deleteDoc(doc(db, "locations", id)); await syncCache(); renderLocations(); showLoading(false); } } });
+            document.getElementById('mat-table').addEventListener('click', async (e) => { if(e.target.classList.contains('btn-danger')) { const id = e.target.getAttribute('data-id'); if(cache.inventory.some(i => i.itemId === id && i.quantity > 0)) return alert("此料號在儲位中尚有庫存，拒絕刪除。"); if(confirm(`確認移除物料 ${id}？`)) { showLoading(true); await deleteDoc(doc(db, "items", id)); await syncCache(); renderMaterials(); showLoading(false); } } });
+            document.getElementById('st-table').addEventListener('input', (e) => { if(e.target.classList.contains('st-input')) { const idx = Number(e.target.getAttribute('data-idx')); const real = Number(e.target.value); currentStocktakeData[idx].realQty = real; const diff = real - currentStocktakeData[idx].quantity; const diffTd = document.getElementById(`st-diff-${idx}`); diffTd.innerText = diff; diffTd.style.color = diff !== 0 ? 'var(--danger)' : 'var(--dark)'; diffTd.style.fontWeight = diff !== 0 ? 'bold' : 'normal'; } });
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>

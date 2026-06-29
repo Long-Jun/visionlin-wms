@@ -999,7 +999,15 @@
                             <input type="text" id="inv-search" class="form-control" placeholder="搜尋唯一編號/品牌/儲位..." style="padding-left: 36px;">
                             <i data-lucide="search" style="position: absolute; left: 12px; color: var(--text-muted); width: 16px; height: 16px;"></i>
                         </div>
+                                                <select id="inv-filter-category" class="form-control">
+                            <option value="">所有大類</option>
+                        </select>
+                                                <select id="inv-filter-category" class="form-control">
+                            <option value="">所有大類</option>
+                        </select>
                         <select id="inv-filter-floor" class="form-control">
+
+
                             <option value="">所有樓層</option>
                             <option value="B1">B1</option>
                             <option value="1F">1F</option>
@@ -1070,9 +1078,18 @@
                             </div>
                         </div>
 
-                        <!-- 第三區塊：與庫存選項設定動態連動的欄位 -->
+                        <!-- 第三區塊：設備大類選擇器 + 動態子欄位 -->
+                        <div class="form-row">
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label>設備大類 *</label>
+                                <select id="tx-category" class="form-control" required>
+                                    <option value="">請選擇設備大類...</option>
+                                    <!-- 由 buildDropdowns() 動態填入 -->
+                                </select>
+                            </div>
+                        </div>
                         <div class="form-row" id="tx-dynamic-fields" style="grid-column: span 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; width: 100%;">
-                            <!-- 這裡由 Javascript 動態生成所有自訂選項欄位（如機器種類、品牌、型號、規格描述、單位等） -->
+                            <!-- 由 renderTransactionFormFields() 根據所選大類動態生成子屬性欄位 -->
                         </div>
                         <div class="form-row">
                             <div class="form-group">
@@ -1520,15 +1537,50 @@
         }
         window.deviceId = deviceId;
 
-        const DEFAULT_OPTIONS = [
-            { id: '機器種類', required: true, values: ['筆記型電腦', '桌上型電腦', '伺服器', '印表機', '交換器', '路由器'], order: 10 },
-            { id: '品牌', required: true, values: ['Apple', 'ASUS', 'Dell', 'Cisco', 'HP', 'Lenovo'], order: 20 },
-            { id: '型號', required: false, values: ['MacBook Pro 14', 'ExpertBook B9', 'OptiPlex 7010', 'Catalyst 9300', 'LaserJet Pro'], order: 30 },
-            { id: '規格描述', required: false, values: ['16G/512G', '8G/256G', '32G/1T', '24-Port PoE'], order: 40 },
-            { id: '單位', required: true, values: ['台', '個', '條', '組', '箱'], order: 50 }
+                const DEFAULT_CATEGORIES = [
+            {
+                id: '筆記型電腦',
+                order: 10,
+                fields: [
+                    { name: '品牌', required: true, values: ['Apple', 'ASUS', 'Dell', 'Lenovo', 'HP'] },
+                    { name: '型號', required: true, values: ['MacBook Pro 14', 'MacBook Air 13', 'ThinkPad X1 Carbon', 'ExpertBook B9'] },
+                    { name: '規格描述', required: false, values: ['M3/16G/512G', 'i7/16G/1T', 'i5/8G/512G'] },
+                    { name: '單位', required: true, values: ['台', '個'] }
+                ]
+            },
+            {
+                id: '桌上型電腦',
+                order: 20,
+                fields: [
+                    { name: '品牌', required: true, values: ['ASUS', 'Dell', 'HP', 'Lenovo'] },
+                    { name: '型號', required: true, values: ['OptiPlex 7010', 'ThinkCentre M70q'] },
+                    { name: '規格描述', required: false, values: ['i5/16G/512G', 'i7/32G/1T'] },
+                    { name: '單位', required: true, values: ['台', '個'] }
+                ]
+            },
+            {
+                id: '硬碟',
+                order: 30,
+                fields: [
+                    { name: '容量', required: true, values: ['500GB', '1TB', '2TB', '4TB'] },
+                    { name: '介面', required: true, values: ['SATA', 'NVMe PCIe'] },
+                    { name: '規格描述', required: false, values: ['讀取 3500MB/s', '讀取 7000MB/s'] },
+                    { name: '單位', required: true, values: ['個', '台'] }
+                ]
+            },
+            {
+                id: '配件',
+                order: 40,
+                fields: [
+                    { name: '配件類型', required: true, values: ['變壓器', '滑鼠', '鍵盤', '轉接線'] },
+                    { name: '規格描述', required: false, values: ['Type-C 65W', 'USB 有線', '藍牙無線'] },
+                    { name: '單位', required: true, values: ['個', '條', '組'] }
+                ]
+            }
         ];
 
-        async function init() {
+
+                        async function init() {
             try {
                 showLoading(true, "雲端核心連線中...");
                 
@@ -1551,24 +1603,41 @@
 
                 await syncCache();
 
-                // 檢查是否需要載入初始自訂屬性選項與預設庫存資料
-                if (cache.options.length === 0) {
-                    showLoading(true, "建立預設庫存選項欄位與庫存資料...");
+                // 檢查是否需要載入初始設備大類與預設庫存資料
+                if (cache.categories.length === 0) {
+                    showLoading(true, "建立預設設備大類與庫存資料...");
                     const batch = db.batch();
                     
-                    // 1. 寫入預設屬性設定
-                    DEFAULT_OPTIONS.forEach(opt => {
-                        const ref = db.collection("options").doc(opt.id);
-                        batch.set(ref, opt);
+                    // 1. 寫入預設設備大類屬性設定
+                    DEFAULT_CATEGORIES.forEach(cat => {
+                        const ref = db.collection("categories").doc(cat.id);
+                        batch.set(ref, cat);
                     });
                     
                     // 2. 寫入初始預設庫存
                     const defaultLoc = cache.locations.length > 0 ? cache.locations[0].id : "1F-A-01";
                     const initialAssets = [
-                        { assetId: 'SN-0001', 機器種類: '筆記型電腦', 品牌: 'Apple', 型號: 'MacBook Pro 14', 規格描述: 'M3/16G/512G', 單位: '台', quantity: 10, status: '正常' },
-                        { assetId: 'SN-0002', 機器種類: '筆記型電腦', 品牌: 'ASUS', 型號: 'ExpertBook B9', 規格描述: 'i7/16G/1T', 單位: '台', quantity: 5, status: '正常' },
-                        { assetId: 'SN-0003', 機器種類: '桌上型電腦', 品牌: 'Dell', 型號: 'OptiPlex 7010', 規格描述: 'i5/16G/512G', 單位: '台', quantity: 15, status: '正常' },
-                        { assetId: 'SN-0004', 機器種類: '網路交換器', 品牌: 'Cisco', 型號: 'Catalyst 9300', 規格描述: '24-Port PoE Switch', 單位: '台', quantity: 2, status: '正常' }
+                        { 
+                            assetId: 'SN-0001', 
+                            category: '筆記型電腦', 
+                            attributes: { '品牌': 'Apple', '型號': 'MacBook Pro 14', '規格描述': 'M3/16G/512G', '單位': '台' },
+                            quantity: 10, 
+                            status: '正常' 
+                        },
+                        { 
+                            assetId: 'SN-0002', 
+                            category: '筆記型電腦', 
+                            attributes: { '品牌': 'ASUS', '型號': 'ExpertBook B9', '規格描述': 'i7/16G/1T', '單位': '台' },
+                            quantity: 5, 
+                            status: '正常' 
+                        },
+                        { 
+                            assetId: 'SN-0003', 
+                            category: '桌上型電腦', 
+                            attributes: { '品牌': 'Dell', '型號': 'OptiPlex 7010', '規格描述': 'i5/16G/512G', '單位': '台' },
+                            quantity: 15, 
+                            status: '正常' 
+                        }
                     ];
                     
                     initialAssets.forEach(ast => {
@@ -1605,24 +1674,32 @@
             } catch (err) {
                 console.error("Firebase Connection Error", err);
                 updateCloudStatus(false, "資料庫連線失敗");
-                showToast("資料庫初始化連線失敗，請在「設定」中檢查您的金鑰或至 Firebase 啟用 Firestore 資料庫。詳細錯誤：" + err.message, "danger");
+                showToast("資料庫連線或初始化載入失敗。詳細錯誤：" + err.message, "danger");
             } finally {
                 showLoading(false);
             }
         }
 
+
+
         // 同步雲端資料到本地緩存 (Compat API)
-        async function syncCache() {
+                        async function syncCache() {
             const locSnap = await db.collection("locations").get(); 
             cache.locations = locSnap.docs.map(d => d.data());
             
-            const optSnap = await db.collection("options").get(); 
-            cache.options = optSnap.docs.map(d => d.data());
-            // 根據設定之欄位順序排序
-            cache.options.forEach((f, idx) => {
-                if (f.order === undefined) f.order = idx * 10;
+            const catSnap = await db.collection("categories").get(); 
+            cache.categories = catSnap.docs.map(d => d.data());
+            // 根據設定之大類與欄位順序排序
+            cache.categories.forEach((c, idx) => {
+                if (c.order === undefined) c.order = idx * 10;
+                if (c.fields) {
+                    c.fields.forEach((f, fidx) => {
+                        if (f.order === undefined) f.order = fidx * 10;
+                    });
+                    c.fields.sort((a, b) => a.order - b.order);
+                }
             });
-            cache.options.sort((a, b) => a.order - b.order);
+            cache.categories.sort((a, b) => a.order - b.order);
             
             const invSnap = await db.collection("inventory").get(); 
             cache.inventory = invSnap.docs.map(d => d.data());
@@ -1636,8 +1713,12 @@
                 .limit(Number(limitVal))
                 .get();
             cache.transactions = txSnap.docs.map(d => d.data());
+            
+            // 重新填入下拉選單
             buildDropdowns();
         }
+
+
 
         async function changeTxLimit(limit) {
             showLoading(true, "自雲端讀取最新交易紀錄中...");
@@ -1880,6 +1961,34 @@
         }
 
         function buildDropdowns() {
+            // 1. 初始化出入庫的設備大類選單
+            const txCatEl = document.getElementById('tx-category');
+            if (txCatEl) {
+                const currentVal = txCatEl.value;
+                let catHtml = '<option value="">請選擇設備大類...</option>';
+                cache.categories.forEach(c => {
+                    catHtml += `<option value="${c.id}">${c.id}</option>`;
+                });
+                txCatEl.innerHTML = catHtml;
+                if (currentVal && cache.categories.some(c => c.id === currentVal)) {
+                    txCatEl.value = currentVal;
+                }
+            }
+
+            // 2. 初始化庫存大類篩選選單
+            const invCatEl = document.getElementById('inv-filter-category');
+            if (invCatEl) {
+                const currentVal = invCatEl.value;
+                let catHtml = '<option value="">所有大類</option>';
+                cache.categories.forEach(c => {
+                    catHtml += `<option value="${c.id}">${c.id}</option>`;
+                });
+                invCatEl.innerHTML = catHtml;
+                if (currentVal && cache.categories.some(c => c.id === currentVal)) {
+                    invCatEl.value = currentVal;
+                }
+            }
+
             // 初始化時依據目前所選的樓層與儲位填入各篩選選單
             syncInventoryFilters('floor');
             syncLocationFilters();
@@ -1891,7 +2000,7 @@
             syncTxLocationOptions('new-');
         }
 
-        function switchPage(pageId, targetEl) {
+                function switchPage(pageId, targetEl) {
             currentPage = pageId;
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active'); 
@@ -1979,9 +2088,10 @@
                 
                 // 動態整理所有的自訂屬性值以顯示項目細節
                 let descParts = [];
-                cache.options.forEach(opt => {
-                    if (tx[opt.id]) descParts.push(tx[opt.id]);
-                });
+                if (tx.category) descParts.push(tx.category);
+                if (tx.attributes && typeof tx.attributes === 'object') {
+                    Object.values(tx.attributes).forEach(v => { if (v) descParts.push(v); });
+                }
                 const itemDisplay = descParts.length > 0 ? descParts.join(' / ') : '-';
                 
                 html += `
@@ -2176,101 +2286,182 @@
             lucide.createIcons();
         }
 
+        let activeCategoryId = '';
+
         function renderOptionsPage() {
-            const container = document.getElementById('options-container');
-            if (!container) return;
-            
-            const q = document.getElementById('mat-search').value.toLowerCase().trim();
-            let html = '';
-            
-            cache.options.filter(field => {
-                return field.id.toLowerCase().includes(q);
-            }).forEach(field => {
-                html += `
-                    <div class="panel" style="border-top: 4px solid var(${field.required ? '--primary' : '--text-muted'}); display: flex; flex-direction: column; justify-content: space-between; min-height: 260px;">
-                        <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <strong>${field.id}</strong>
-                                    <div style="display: flex; gap: 2px;" class="no-print">
-                                        <button class="btn btn-outline" style="padding: 2px 4px; font-size: 0.7rem; height: 20px; min-width: auto; line-height: 1;" onclick="moveOptionField('${field.id}', 'up')" title="上移欄位順序"><i data-lucide="arrow-up" style="width:11px; height:11px;"></i></button>
-                                        <button class="btn btn-outline" style="padding: 2px 4px; font-size: 0.7rem; height: 20px; min-width: auto; line-height: 1;" onclick="moveOptionField('${field.id}', 'down')" title="下移欄位順序"><i data-lucide="arrow-down" style="width:11px; height:11px;"></i></button>
+            const catListEl = document.getElementById('category-list');
+            const fieldsContainer = document.getElementById('fields-container');
+            const catTitleEl = document.getElementById('active-category-title');
+            if (!catListEl || !fieldsContainer) return;
+
+            // 1. 渲染左欄：大類列表
+            let catHtml = '';
+            if (cache.categories.length === 0) {
+                catHtml = '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 15px; text-align: center;">暫無分類</div>';
+                activeCategoryId = '';
+            } else {
+                // 如果當前沒有選取任何大類，預設選取第一個
+                if (!activeCategoryId || !cache.categories.some(c => c.id === activeCategoryId)) {
+                    activeCategoryId = cache.categories[0].id;
+                }
+                
+                cache.categories.forEach(cat => {
+                    const isActive = cat.id === activeCategoryId;
+                    catHtml += `
+                        <div class="category-item-row" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}; background: ${isActive ? 'var(--primary-glow)' : 'rgba(255,255,255,0.01)'}; cursor: pointer;" onclick="selectCategory('${cat.id}')">
+                            <span style="font-weight: ${isActive ? '600' : 'normal'}; color: ${isActive ? 'var(--text-main)' : 'var(--text-muted)'};">${cat.id}</span>
+                            <div style="display: flex; gap: 2px;" onclick="event.stopPropagation();">
+                                <button class="btn btn-outline" style="padding: 2px; height: 22px; width: 22px;" onclick="moveCategory('${cat.id}', 'up')" title="上移大類"><i data-lucide="arrow-up" style="width:12px; height:12px;"></i></button>
+                                <button class="btn btn-outline" style="padding: 2px; height: 22px; width: 22px;" onclick="moveCategory('${cat.id}', 'down')" title="下移大類"><i data-lucide="arrow-down" style="width:12px; height:12px;"></i></button>
+                                <button class="btn btn-outline" style="padding: 2px; height: 22px; width: 22px; border-color: rgba(239, 68, 68, 0.4);" onclick="deleteCategory('${cat.id}')" title="刪除大類"><i data-lucide="trash-2" style="width:12px; height:12px; color: var(--danger);"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            catListEl.innerHTML = catHtml;
+
+            // 2. 渲染右欄：大類對應之子欄位屬性清單
+            let fieldsHtml = '';
+            if (!activeCategoryId) {
+                catTitleEl.innerText = '請先新增或選擇大類';
+                fieldsHtml = '<div style="grid-column: span 2; color: var(--text-muted); font-size: 0.85rem; padding: 20px; text-align: center;">請先從左側選擇或新增一個大類項目。</div>';
+            } else {
+                const cat = cache.categories.find(c => c.id === activeCategoryId);
+                catTitleEl.innerText = `「${activeCategoryId}」之子屬性欄位`;
+                
+                if (!cat.fields || cat.fields.length === 0) {
+                    fieldsHtml = '<div style="grid-column: span 2; color: var(--text-muted); font-size: 0.85rem; padding: 20px; text-align: center;">此大類暫無任何欄位，請點擊「新增子欄位」建立。</div>';
+                } else {
+                    cat.fields.forEach((field, fidx) => {
+                        fieldsHtml += `
+                            <div class="panel" style="border-top: 4px solid var(${field.required ? '--primary' : '--text-muted'}); display: flex; flex-direction: column; justify-content: space-between; min-height: 250px; background: rgba(255,255,255,0.01); border-radius: var(--radius-sm); padding: 15px;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
+                                        <div style="display: flex; align-items: center; gap: 4px;">
+                                            <strong>${field.name}</strong>
+                                            <div style="display: flex; gap: 2px;">
+                                                <button class="btn btn-outline" style="padding: 2px; height: 18px; width: 18px; line-height: 1;" onclick="moveField('${cat.id}', ${fidx}, 'up')" title="上移欄位"><i data-lucide="arrow-up" style="width:10px; height:10px;"></i></button>
+                                                <button class="btn btn-outline" style="padding: 2px; height: 18px; width: 18px; line-height: 1;" onclick="moveField('${cat.id}', ${fidx}, 'down')" title="下移欄位"><i data-lucide="arrow-down" style="width:10px; height:10px;"></i></button>
+                                            </div>
+                                        </div>
+                                        <span class="status-badge ${field.required ? 'bg-normal' : 'bg-pending'}" style="cursor: pointer; font-size: 0.72rem; padding: 2px 6px;" onclick="toggleFieldRequired('${cat.id}', ${fidx})">
+                                            ${field.required ? '必填' : '選填'}
+                                        </span>
+                                    </div>
+                                    
+                                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px;">
+                                        ${field.values.map(val => `
+                                            <span class="status-badge" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; gap: 4px; padding: 2px 6px; font-size: 0.72rem;">
+                                                ${val}
+                                                <i data-lucide="x" style="width: 10px; height: 10px; cursor: pointer; color: var(--danger);" onclick="deleteFieldValue('${cat.id}', ${fidx}, '${val}')"></i>
+                                            </span>
+                                        `).join('')}
+                                        ${field.values.length === 0 ? '<span style="font-size: 0.75rem; color: var(--text-muted);">無選項，請新增</span>' : ''}
                                     </div>
                                 </div>
-                                <span class="status-badge ${field.required ? 'bg-normal' : 'bg-pending'}" style="cursor: pointer;" onclick="toggleOptionFieldRequired('${field.id}')">
-                                    ${field.required ? '必選 (必填)' : '可選 (選填)'}
-                                </span>
+                                
+                                <div>
+                                    <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+                                        <input type="text" id="add-val-input-${cat.id}-${fidx}" class="form-control" placeholder="新增值..." style="height: 28px; font-size: 0.78rem;">
+                                        <button class="btn btn-sm btn-success" style="height: 28px; padding: 2px 8px; font-size: 0.78rem;" onclick="addFieldValue('${cat.id}', ${fidx})">新增</button>
+                                    </div>
+                                    <button class="btn btn-danger btn-sm" style="width: 100%; height: 28px; font-size: 0.78rem; padding: 2px 8px;" onclick="deleteField('${cat.id}', ${fidx})">
+                                        <i data-lucide="trash-2" style="width:10px; height:10px; display:inline-block; vertical-align:middle; margin-right:2px;"></i> 刪除此欄位
+                                    </button>
+                                </div>
                             </div>
-                            
-                            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 15px;" id="opt-vals-${field.id}">
-                                ${field.values.map(val => `
-                                    <span class="status-badge" style="background: rgba(255,255,255,0.05); display: flex; align-items: center; gap: 4px; padding: 4px 8px;">
-                                        ${val}
-                                        <i data-lucide="x" style="width: 12px; height: 12px; cursor: pointer; color: var(--danger);" onclick="deleteOptionValue('${field.id}', '${val}')"></i>
-                                    </span>
-                                `).join('')}
-                                ${field.values.length === 0 ? '<span style="font-size: 0.8rem; color: var(--text-muted);">無選項，請新增</span>' : ''}
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-                                <input type="text" id="add-val-input-${field.id}" class="form-control" placeholder="新增值..." style="height: 32px; font-size: 0.85rem;">
-                                <button class="btn btn-sm btn-success" style="height: 32px;" onclick="addOptionValue('${field.id}')">新增</button>
-                            </div>
-                            <button class="btn btn-danger btn-sm" style="width: 100%; height: 32px;" onclick="deleteOptionField('${field.id}')">
-                                <i data-lucide="trash-2" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px;"></i> 刪除此欄位
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
+                        `;
+                    });
+                }
+            }
+            fieldsContainer.innerHTML = fieldsHtml;
             lucide.createIcons();
         }
 
-        async function moveOptionField(fieldId, direction) {
-            // 確保所有緩存項目都有 order 屬性
-            cache.options.forEach((f, idx) => {
-                if (f.order === undefined) {
-                    f.order = idx * 10;
+        function selectCategory(catId) {
+            activeCategoryId = catId;
+            renderOptionsPage();
+        }
+
+        // ==========================================
+        // 大類 CRUD 動作
+        // ==========================================
+        async function promptAddCategory() {
+            const name = prompt("請輸入新設備大類名稱 (如: 記憶體, 顯示卡)：", "");
+            if (!name) return;
+            const cleanName = name.trim();
+            if (!cleanName) return;
+
+            if (cache.categories.some(c => c.id === cleanName)) {
+                return showToast(`大類「${cleanName}」已存在！`, "danger");
+            }
+
+            showLoading(true, "建立設備大類中...");
+            try {
+                const nextOrder = cache.categories.length > 0 ? cache.categories[cache.categories.length - 1].order + 10 : 10;
+                await db.collection("categories").doc(cleanName).set({
+                    id: cleanName,
+                    order: nextOrder,
+                    fields: []
+                });
+                await syncCache();
+                activeCategoryId = cleanName;
+                renderOptionsPage();
+                showToast(`已建立設備大類「${cleanName}」！`, "success");
+            } catch (err) {
+                showToast("新增失敗：" + err.message, "danger");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deleteCategory(catId) {
+            if (!confirm(`⚠️ 嚴重警告：確定要永久刪除設備大類「${catId}」嗎？\n此大類下的所有子欄位定義都將被完全抹除！`)) return;
+
+            showLoading(true, "刪除設備大類中...");
+            try {
+                await db.collection("categories").doc(catId).delete();
+                await syncCache();
+                if (activeCategoryId === catId) {
+                    activeCategoryId = cache.categories.length > 0 ? cache.categories[0].id : '';
                 }
-            });
-            cache.options.sort((a, b) => a.order - b.order);
-            
-            const curIdx = cache.options.findIndex(f => f.id === fieldId);
+                renderOptionsPage();
+                showToast(`已刪除大類「${catId}」！`, "success");
+            } catch (err) {
+                showToast("刪除失敗：" + err.message, "danger");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function moveCategory(catId, direction) {
+            const curIdx = cache.categories.findIndex(c => c.id === catId);
             if (curIdx === -1) return;
-            
+
             let targetIdx = -1;
-            if (direction === 'up' && curIdx > 0) {
-                targetIdx = curIdx - 1;
-            } else if (direction === 'down' && curIdx < cache.options.length - 1) {
-                targetIdx = curIdx + 1;
+            if (direction === 'up' && curIdx > 0) targetIdx = curIdx - 1;
+            else if (direction === 'down' && curIdx < cache.categories.length - 1) targetIdx = curIdx + 1;
+
+            if (targetIdx === -1) return;
+
+            const temp = cache.categories[curIdx].order;
+            cache.categories[curIdx].order = cache.categories[targetIdx].order;
+            cache.categories[targetIdx].order = temp;
+
+            if (cache.categories[curIdx].order === cache.categories[targetIdx].order) {
+                cache.categories[curIdx].order = curIdx * 10 + (direction === 'up' ? -5 : 5);
             }
-            
-            if (targetIdx === -1) return; // 無法再移動
-            
-            // 交換 order 欄位值
-            const temp = cache.options[curIdx].order;
-            cache.options[curIdx].order = cache.options[targetIdx].order;
-            cache.options[targetIdx].order = temp;
-            
-            // 如果 order 相等，賦予新的獨立 order
-            if (cache.options[curIdx].order === cache.options[targetIdx].order) {
-                cache.options[curIdx].order = curIdx * 10 + (direction === 'up' ? -5 : 5);
-            }
-            
-            showLoading(true, "調整屬性欄位順序中...");
+
+            showLoading(true, "調整大類順序中...");
             try {
                 const batch = db.batch();
-                batch.set(db.collection("options").doc(cache.options[curIdx].id), { order: cache.options[curIdx].order }, { merge: true });
-                batch.set(db.collection("options").doc(cache.options[targetIdx].id), { order: cache.options[targetIdx].order }, { merge: true });
+                batch.set(db.collection("categories").doc(cache.categories[curIdx].id), { order: cache.categories[curIdx].order }, { merge: true });
+                batch.set(db.collection("categories").doc(cache.categories[targetIdx].id), { order: cache.categories[targetIdx].order }, { merge: true });
                 await batch.commit();
                 await syncCache();
                 renderOptionsPage();
-                buildDropdowns(); // 即時重新渲染出入庫欄位順序
-                renderInventory(); // 即時重新渲染即時庫存表格欄位順序
-                showToast("欄位順序已調整！", "success");
+                showToast("大類順序已調整！", "success");
             } catch (err) {
                 showToast("順序調整失敗：" + err.message, "danger");
             } finally {
@@ -2278,40 +2469,57 @@
             }
         }
 
-        async function toggleOptionFieldRequired(fieldId) {
-            const field = cache.options.find(f => f.id === fieldId);
-            if (!field) return;
-            const nextReq = !field.required;
-            showLoading(true, "更新欄位屬性中...");
+        // ==========================================
+        // 子欄位屬性 CRUD 動作
+        // ==========================================
+        function openAddFieldModal() {
+            if (!activeCategoryId) return showToast("請先選擇大類項目！", "warning");
+            document.getElementById('modal-target-cat-label').innerText = `大類：${activeCategoryId}`;
+            document.getElementById('new-opt-name').value = '';
+            document.getElementById('new-opt-values').value = '';
+            document.getElementById('modal-add-material').style.display = 'flex';
+        }
+
+        async function toggleFieldRequired(catId, fidx) {
+            const cat = cache.categories.find(c => c.id === catId);
+            if (!cat || !cat.fields || !cat.fields[fidx]) return;
+
+            cat.fields[fidx].required = !cat.fields[fidx].required;
+
+            showLoading(true, "更新屬性欄位中...");
             try {
-                await db.collection("options").doc(fieldId).update({ required: nextReq });
+                await db.collection("categories").doc(catId).update({ fields: cat.fields });
                 await syncCache();
                 renderOptionsPage();
-                showToast(`欄位「${fieldId}」已變更為 ${nextReq ? '必填' : '選填'}。`, "success");
+                showToast("屬性規則已更新！", "success");
             } catch (err) {
-                showToast("變更失敗：" + err.message, "danger");
+                showToast("更新失敗：" + err.message, "danger");
             } finally {
                 showLoading(false);
             }
         }
 
-        async function addOptionValue(fieldId) {
-            const input = document.getElementById(`add-val-input-${fieldId}`);
+        async function addFieldValue(catId, fidx) {
+            const input = document.getElementById(`add-val-input-${catId}-${fidx}`);
             if (!input) return;
             const val = input.value.trim();
-            if (!val) return showToast("請輸入欲新增的選項內容！", "warning");
-            
-            const field = cache.options.find(f => f.id === fieldId);
-            if (!field) return;
-            if (field.values.includes(val)) return showToast("該選項值已存在！", "warning");
-            
-            showLoading(true, "雲端寫入中...");
+            if (!val) return showToast("請輸入選項內容！", "warning");
+
+            const cat = cache.categories.find(c => c.id === catId);
+            if (!cat || !cat.fields || !cat.fields[fidx]) return;
+
+            if (cat.fields[fidx].values.includes(val)) {
+                return showToast("該選項值已存在！", "warning");
+            }
+
+            cat.fields[fidx].values.push(val);
+
+            showLoading(true, "新增選項值中...");
             try {
-                const nextVals = [...field.values, val];
-                await db.collection("options").doc(fieldId).update({ values: nextVals });
+                await db.collection("categories").doc(catId).update({ fields: cat.fields });
                 await syncCache();
                 renderOptionsPage();
-                showToast(`已新增選項「${val}」！`, "success");
+                showToast(`已新增可選選項「${val}」！`, "success");
             } catch (err) {
                 showToast("寫入失敗：" + err.message, "danger");
             } finally {
@@ -2319,70 +2527,124 @@
             }
         }
 
-        async function deleteOptionValue(fieldId, val) {
-            const field = cache.options.find(f => f.id === fieldId);
-            if (!field) return;
-            
-            if (!confirm(`確認要從「${fieldId}」移除可選值「${val}」嗎？`)) return;
-            
-            showLoading(true, "雲端刪除中...");
+        async function deleteFieldValue(catId, fidx, val) {
+            const cat = cache.categories.find(c => c.id === catId);
+            if (!cat || !cat.fields || !cat.fields[fidx]) return;
+
+            if (!confirm(`確定要刪除屬性「${cat.fields[fidx].name}」下的「${val}」選項值嗎？`)) return;
+
+            cat.fields[fidx].values = cat.fields[fidx].values.filter(v => v !== val);
+
+            showLoading(true, "刪除選項值中...");
             try {
-                const nextVals = field.values.filter(v => v !== val);
-                await db.collection("options").doc(fieldId).update({ values: nextVals });
+                await db.collection("categories").doc(catId).update({ fields: cat.fields });
                 await syncCache();
                 renderOptionsPage();
-                showToast(`已從「${fieldId}」移除「${val}」！`, "success");
+                showToast("選項值已刪除。", "success");
             } catch (err) {
-                showToast("移除失敗：" + err.message, "danger");
+                showToast("刪除失敗：" + err.message, "danger");
             } finally {
                 showLoading(false);
             }
         }
 
-        async function deleteOptionField(fieldId) {
-            if (!confirm(`⚠️ 警告：您確認要永久刪除「${fieldId}」此項庫存設定欄位嗎？這將會使其從頁面消失！`)) return;
-            
-            showLoading(true, "雲端屬性欄位刪除中...");
+        async function deleteField(catId, fidx) {
+            const cat = cache.categories.find(c => c.id === catId);
+            if (!cat || !cat.fields || !cat.fields[fidx]) return;
+
+            if (!confirm(`⚠️ 警告：確定要刪除欄位「${cat.fields[fidx].name}」嗎？這將會使本大類下的入庫表單不再有此欄位！`)) return;
+
+            cat.fields.splice(fidx, 1);
+
+            showLoading(true, "刪除子屬性欄位中...");
             try {
-                await db.collection("options").doc(fieldId).delete();
+                await db.collection("categories").doc(catId).update({ fields: cat.fields });
                 await syncCache();
                 renderOptionsPage();
-                showToast(`自訂屬性欄位「${fieldId}」已永久刪除！`, "success");
+                showToast("屬性欄位已成功刪除！", "success");
             } catch (err) {
-                showToast("刪除欄位失敗：" + err.message, "danger");
+                showToast("刪除失敗：" + err.message, "danger");
             } finally {
                 showLoading(false);
             }
         }
 
+        async function moveField(catId, fidx, direction) {
+            const cat = cache.categories.find(c => c.id === catId);
+            if (!cat || !cat.fields || !cat.fields[fidx]) return;
+
+            let targetIdx = -1;
+            if (direction === 'up' && fidx > 0) targetIdx = fidx - 1;
+            else if (direction === 'down' && fidx < cat.fields.length - 1) targetIdx = fidx + 1;
+
+            if (targetIdx === -1) return;
+
+            const temp = cat.fields[fidx];
+            cat.fields[fidx] = cat.fields[targetIdx];
+            cat.fields[targetIdx] = temp;
+
+            showLoading(true, "調整欄位順序中...");
+            try {
+                await db.collection("categories").doc(catId).update({ fields: cat.fields });
+                await syncCache();
+                renderOptionsPage();
+                showToast("欄位排序已更新！", "success");
+            } catch (err) {
+                showToast("排序調整失敗：" + err.message, "danger");
+            } finally {
+                showLoading(false);
+            }
+        }
         function renderTransactionFormFields() {
             const container = document.getElementById('tx-dynamic-fields');
             if (!container) return;
-            
+
+            const categoryId = document.getElementById('tx-category')?.value;
+            if (!categoryId) {
+                container.innerHTML = '<div style="grid-column: span 2; color: var(--text-muted); font-size: 0.85rem;">請選擇設備大類以載入自訂屬性欄位。</div>';
+                return;
+            }
+
+            const category = cache.categories.find(c => c.id === categoryId);
+            if (!category || !category.fields || category.fields.length === 0) {
+                container.innerHTML = '<div style="grid-column: span 2; color: var(--text-muted); font-size: 0.85rem;">此設備大類目前無任何自訂欄位。</div>';
+                return;
+            }
+
             let html = '';
-            cache.options.forEach(field => {
+            category.fields.forEach(field => {
                 const reqAttr = field.required ? 'required' : '';
-                const reqLabel = field.required ? ' *' : '';
+                const reqMark = field.required ? ' *' : '';
                 
                 html += `
-                    <div class="form-group tx-dyn-group" data-field-name="${field.id}">
-                        <label>${field.id}${reqLabel}</label>
-                        <select id="tx-dyn-${field.id}" class="form-control" ${reqAttr}>
-                            <option value="">${field.required ? '請選擇...' : '(無)'}</option>
+                    <div class="form-group">
+                        <label>${field.name}${reqMark}</label>
+                `;
+
+                if (field.values && field.values.length > 0) {
+                    html += `
+                        <select class="form-control tx-dynamic-input" data-field-name="${field.name}" ${reqAttr}>
+                            <option value="">選擇${field.name}...</option>
                             ${field.values.map(val => `<option value="${val}">${val}</option>`).join('')}
                         </select>
-                    </div>
-                `;
+                    `;
+                } else {
+                    html += `
+                        <input type="text" class="form-control tx-dynamic-input" data-field-name="${field.name}" placeholder="輸入${field.name}" ${reqAttr}>
+                    `;
+                }
+
+                html += `</div>`;
             });
-            
             container.innerHTML = html;
         }
 
-        function renderInventory() {
+                function renderInventory() {
             const q = document.getElementById('inv-search').value.toLowerCase(); 
             const stat = document.getElementById('inv-filter-status').value; 
             const floor = document.getElementById('inv-filter-floor').value;
             const filterLoc = document.getElementById('inv-filter-loc').value; // 儲位篩選
+            const filterCat = document.getElementById('inv-filter-category')?.value || ''; // 大類篩選
             
             // 1. 動態建構 Table 標頭 HTML
             let theadHtml = `
@@ -2391,9 +2653,18 @@
                     <th>物品編號 / 唯一碼</th>
             `;
             
-            cache.options.forEach(opt => {
-                theadHtml += `<th>${opt.id}</th>`;
-            });
+            let activeFields = [];
+            if (filterCat) {
+                const catObj = cache.categories.find(c => c.id === filterCat);
+                if (catObj && catObj.fields) {
+                    activeFields = catObj.fields;
+                }
+                activeFields.forEach(field => {
+                    theadHtml += `<th>${field.name}</th>`;
+                });
+            } else {
+                theadHtml += `<th>設備大類</th><th>屬性描述</th>`;
+            }
             
             theadHtml += `
                     <th>庫存數量</th>
@@ -2414,19 +2685,32 @@
                 if(floor && locParts[0] !== floor) return;
                 if(filterLoc && inv.locationId !== filterLoc) return; // 儲位匹配
                 
-                // 動態搜尋匹配
+                // 大類篩選匹配
+                const itemCat = inv.category || '';
+                if(filterCat && itemCat !== filterCat) return;
+
+                // 收集屬性進行搜尋
                 const assetId = inv.assetId || inv.itemId || '-';
-                let searchTarget = `${inv.locationId} ${assetId}`;
-                cache.options.forEach(opt => {
-                    searchTarget += ` ${inv[opt.id] || ''}`;
-                });
-                searchTarget = searchTarget.toLowerCase();
+                let attributesStr = '';
+                let attributesSearch = '';
+                
+                if (inv.attributes) {
+                    Object.entries(inv.attributes).forEach(([k, v]) => {
+                        if (v) {
+                            attributesStr += `[${k}: ${v}] `;
+                            attributesSearch += ` ${v}`;
+                        }
+                    });
+                }
+                
+                // 動態搜尋匹配
+                let searchTarget = `${inv.locationId} ${assetId} ${itemCat} ${attributesSearch}`.toLowerCase();
                 if(q && !searchTarget.includes(q)) return;
                 
                 let badgeClass = 'bg-normal';
                 if(inv.status === '待驗') badgeClass = 'bg-pending';
                 if(inv.status === '待修') badgeClass = 'bg-repair';
-                if(inv.status === '報廢') badgeClass = 'bg-scrap';
+                if(inv.status === '待報廢' || inv.status === '報廢') badgeClass = 'bg-scrap';
                 if(inv.status === '借出') badgeClass = 'bg-borrowed';
 
                 let rowHtml = `
@@ -2435,10 +2719,15 @@
                         <td>${assetId}</td>
                 `;
                 
-                // 填入所有自訂欄位的值
-                cache.options.forEach(opt => {
-                    rowHtml += `<td>${inv[opt.id] || '-'}</td>`;
-                });
+                // 依大類模式填入欄位值
+                if (filterCat) {
+                    activeFields.forEach(field => {
+                        const val = (inv.attributes && inv.attributes[field.name]) ? inv.attributes[field.name] : '-';
+                        rowHtml += `<td>${val}</td>`;
+                    });
+                } else {
+                    rowHtml += `<td>${itemCat || '未分類'}</td><td>${attributesStr || '-'}</td>`;
+                }
                 
                 rowHtml += `
                         <td style="font-weight:bold; font-size:1.05rem; color: var(--success);">${inv.quantity}</td>
@@ -2452,7 +2741,7 @@
             document.querySelector('#inv-table tbody').innerHTML = tbodyHtml;
         }
 
-        // ==========================================
+                // ==========================================
         // 4. 並發安全防衝突交易邏輯 (Compat API)
         // ==========================================
         async function processTransaction(e) {
@@ -2478,23 +2767,35 @@
             if (document.getElementById('st-user')) document.getElementById('st-user').value = user;
             if (document.getElementById('st-mob-user')) document.getElementById('st-mob-user').value = user;
 
-            // 動態從表單收集自訂選項欄位的值
-            const dynPayload = {};
+            // 動態從表單收集設備大類與自訂屬性欄位的值
+            const txCategory = document.getElementById('tx-category').value;
+            if (!txCategory) {
+                return showToast("請選取設備大類！", "danger");
+            }
+            
+            const dynPayload = {
+                category: txCategory,
+                attributes: {}
+            };
+            
             let missingRequiredField = false;
             let missingFieldName = "";
             
-            cache.options.forEach(opt => {
-                const el = document.getElementById(`tx-dyn-${opt.id}`);
-                const val = el ? el.value.trim() : '';
-                if (opt.required && !val) {
-                    missingRequiredField = true;
-                    missingFieldName = opt.id;
-                }
-                dynPayload[opt.id] = val;
-            });
+            const categoryObj = cache.categories.find(c => c.id === txCategory);
+            if (categoryObj && categoryObj.fields) {
+                categoryObj.fields.forEach(field => {
+                    const el = document.querySelector(`.tx-dynamic-input[data-field-name="${field.name}"]`);
+                    const val = el ? el.value.trim() : '';
+                    if (field.required && !val) {
+                        missingRequiredField = true;
+                        missingFieldName = field.name;
+                    }
+                    dynPayload.attributes[field.name] = val;
+                });
+            }
             
             if (missingRequiredField) {
-                return showToast(`請選取「${missingFieldName}」！`, "danger");
+                return showToast(`請輸入/選取「${missingFieldName}」！`, "danger");
             }
 
             if(type !== 'out' && type !== 'borrow' && type !== 'return' && !cache.locations.some(l => l.id === loc)) return showToast(`目標儲位 ${loc} 尚未啟用！`, "danger");
@@ -2593,7 +2894,7 @@
             }
         }
 
-        // ==========================================
+                // ==========================================
         // 5. 智慧卡片盤點與對帳 (Mobile & Tablet)
         // ==========================================
         function generateStocktakeList() {
@@ -2607,15 +2908,22 @@
                 return true; 
             }).map(inv => { 
                 let descParts = [];
-                cache.options.forEach(opt => {
-                    if (inv[opt.id]) descParts.push(inv[opt.id]);
-                });
+                if (inv.category) descParts.push(inv.category);
+                if (inv.attributes) {
+                    Object.entries(inv.attributes).forEach(([k, v]) => {
+                        if (v && k !== '規格描述' && k !== '單位') descParts.push(v);
+                    });
+                }
                 const desc = descParts.length > 0 ? descParts.join(' / ') : '-';
+                
+                const spec = (inv.attributes && inv.attributes['規格描述']) ? inv.attributes['規格描述'] : '';
+                const unit = (inv.attributes && inv.attributes['單位']) ? inv.attributes['單位'] : '台';
+                
                 return { 
                     ...inv, 
                     itemName: desc, 
-                    spec: inv['規格描述'] || '', 
-                    unit: inv['單位'] || '台', 
+                    spec: spec, 
+                    unit: unit, 
                     realQty: inv.quantity, 
                     realStatus: inv.status 
                 }; 
@@ -2640,9 +2948,10 @@
                     html += `
                         <tr>
                             <td><strong>${row.locationId}</strong></td>
-                            <td>${row.itemId}</td>
-                            <td>${row.itemName||'-'}</td>
-                            <td><span style="font-weight:600;">${row.quantity}</span> ${row.unit||'pcs'}</td>
+                            <td>${row.itemId || row.assetId || '-'}</td>
+                            <td>${row.itemName}</td>
+                            <td>${row.spec || '-'}</td>
+                            <td><span style="font-weight:600;">${row.quantity}</span> ${row.unit}</td>
                             <td><span class="status-badge bg-normal">${row.status}</span></td>
                             <td><input type="number" class="form-control st-input" data-idx="${idx}" value="${row.realQty}" min="0" step="0.01" style="width:100px; height: 32px; padding: 2px 8px;"></td>
                             <td>
@@ -2656,7 +2965,7 @@
                             </td>
                             <td id="st-diff-${idx}" style="font-weight:bold;">0</td>
                         </tr>
-                    `; 
+                    `;
                 });
                 document.querySelector('#st-table tbody').innerHTML = html;
             }
@@ -2664,8 +2973,7 @@
             showToast(`已載入 ${currentStocktakeData.length} 筆盤點資料。`, "success");
         }
 
-        // 行動版盤點卡片渲染
-        function renderMobileStocktakeCard() {
+                function renderMobileStocktakeCard() {
             if (currentStocktakeData.length === 0) return;
             const idx = currentStocktakeIndex;
             const item = currentStocktakeData[idx];
@@ -2952,17 +3260,31 @@
         }
 
         function exportInventoryReport() {
-            // 標頭欄位包含靜態欄位 + 所有動態選項設定屬性
-            const dynamicHeaders = cache.options.map(o => o.id);
-            const headers = ["儲位", "物品編號/唯一碼", ...dynamicHeaders, "數量", "狀態", "最後更新時間"];
-            
+            // 1. 收集系統中所有大類的所有不重複自訂屬性欄位名稱
+            const allFieldNames = [];
+            cache.categories.forEach(cat => {
+                if (cat.fields) {
+                    cat.fields.forEach(f => {
+                        if (!allFieldNames.includes(f.name)) {
+                            allFieldNames.push(f.name);
+                        }
+                    });
+                }
+            });
+
+            const headers = ["儲位", "物品編號/唯一碼", "設備大類", ...allFieldNames, "數量", "狀態", "最後更新時間"];
             let csvRows = [headers.map(h => `"${h}"`).join(",")];
             
             cache.inventory.forEach(inv => {
-                const dynamicVals = cache.options.map(o => inv[o.id] !== undefined ? `"${inv[o.id]}"` : '""');
+                const dynamicVals = allFieldNames.map(fieldName => {
+                    const val = (inv.attributes && inv.attributes[fieldName]) ? inv.attributes[fieldName] : '';
+                    return `"${val}"`;
+                });
+                
                 const row = [
                     `"${inv.locationId}"`,
                     `"${inv.itemId || inv.assetId || '-'}"`,
+                    `"${inv.category || '未指定'}"`,
                     ...dynamicVals,
                     `"${inv.quantity}"`,
                     `"${inv.status}"`,
@@ -2986,14 +3308,26 @@
                 const txSnap = await txQuery.get();
                 const txData = txSnap.docs.map(d => d.data());
                 
-                // 標頭欄位包含靜態欄位 + 所有動態選項設定屬性
-                const dynamicHeaders = cache.options.map(o => o.id);
-                const headers = ["交易單號", "交易時間", "交易類型", "物品編號/唯一碼", ...dynamicHeaders, "數量", "起點儲位/來源", "新目標儲位(移位)", "狀態", "經手人", "備註"];
-                
+                // 1. 收集系統中所有不重複自訂屬性欄位名稱
+                const allFieldNames = [];
+                cache.categories.forEach(cat => {
+                    if (cat.fields) {
+                        cat.fields.forEach(f => {
+                            if (!allFieldNames.includes(f.name)) {
+                                allFieldNames.push(f.name);
+                            }
+                        });
+                    }
+                });
+
+                const headers = ["交易單號", "交易時間", "交易類型", "物品編號/唯一碼", "設備大類", ...allFieldNames, "數量", "起點儲位/來源", "新目標儲位(移位)", "狀態", "經手人", "備註"];
                 let csvRows = [headers.map(h => `"${h}"`).join(",")];
                 
                 txData.forEach(tx => {
-                    const dynamicVals = cache.options.map(o => tx[o.id] !== undefined ? `"${tx[o.id]}"` : '""');
+                    const dynamicVals = allFieldNames.map(fieldName => {
+                        const val = (tx.attributes && tx.attributes[fieldName]) ? tx.attributes[fieldName] : '';
+                        return `"${val}"`;
+                    });
                     
                     // 轉換交易類型中文
                     let typeText = tx.type;
@@ -3008,6 +3342,7 @@
                         `"${tx.date}"`,
                         `"${typeText}"`,
                         `"${tx.itemId}"`,
+                        `"${tx.category || '未指定'}"`,
                         ...dynamicVals,
                         `"${tx.quantity}"`,
                         `"${tx.locationId}"`,
@@ -3028,7 +3363,7 @@
             }
         }
 
-        function exportLocationReport() {
+                function exportLocationReport() {
             const headers = ["儲位編號", "樓層", "層架", "層數", "使用狀態"];
             let csvRows = [headers.map(h => `"${h}"`).join(",")];
             
@@ -3075,10 +3410,10 @@
             reader.onload = async function(e) {
                 try {
                     const parsed = JSON.parse(e.target.result); 
-                    if((!parsed.items && !parsed.options) || !parsed.locations || !parsed.inventory) throw new Error("備份檔案欄位結構缺失。");
+                    if((!parsed.items && !parsed.options && !parsed.categories) || !parsed.locations || !parsed.inventory) throw new Error("備份檔案欄位結構缺失。");
                     
                     // 清空現有所有雲端 Firestore 集合
-                    for (let col of ['options', 'items', 'locations', 'inventory', 'transactions']) { 
+                    for (let col of ['categories', 'options', 'items', 'locations', 'inventory', 'transactions']) { 
                         const snap = await db.collection(col).get(); 
                         for (let docFile of snap.docs) { 
                             await db.collection(col).doc(docFile.id).delete(); 
@@ -3088,26 +3423,53 @@
                     // 批次寫入新資料
                     for(let l of parsed.locations) { await db.collection("locations").doc(l.id).set(l); }
                     
-                    if (parsed.options) {
-                        for(let o of parsed.options) { await db.collection("options").doc(o.id).set(o); }
+                    if (parsed.categories) {
+                        for(let c of parsed.categories) { await db.collection("categories").doc(c.id).set(c); }
+                    } else if (parsed.options) {
+                        // 轉換舊版 options 為新版預設大類
+                        const fields = parsed.options.map(opt => ({
+                            name: opt.id,
+                            required: opt.required || false,
+                            values: opt.values || []
+                        }));
+                        await db.collection("categories").doc("預設大類").set({
+                            id: "預設大類",
+                            order: 10,
+                            fields: fields
+                        });
                     } else if (parsed.items) {
-                        // 舊版備份自動生成預設庫存欄位
-                        for(let opt of DEFAULT_OPTIONS) { await db.collection("options").doc(opt.id).set(opt); }
+                        // 舊版 items 結構轉換
+                        const fields = [
+                            { name: '機器種類', required: true, values: ['桌上型電腦', '筆記型電腦', '其餘資訊設備'] },
+                            { name: '品牌', required: true, values: [] },
+                            { name: '型號', required: true, values: [] },
+                            { name: '規格描述', required: false, values: [] },
+                            { name: '單位', required: true, values: ['台', '個', '箱', '組'] }
+                        ];
+                        await db.collection("categories").doc("電腦設備").set({
+                            id: "電腦設備",
+                            order: 10,
+                            fields: fields
+                        });
                     }
                     
                     for(let inv of parsed.inventory) { 
                         const assetId = inv.assetId || inv.itemId || `SN-${Date.now()}`;
                         const invId = `${assetId}_${inv.locationId}_${inv.status}`;
                         
-                        // 舊版備份自動轉換為欄位屬性
                         let payload = { ...inv, assetId };
-                        if (parsed.items) {
-                            const legacyItem = parsed.items.find(i => i.id === inv.itemId) || {};
-                            payload['機器種類'] = legacyItem.type || '未指定';
-                            payload['品牌'] = legacyItem.brand || '未指定';
-                            payload['型號'] = legacyItem.model || '未指定';
-                            payload['規格描述'] = legacyItem.spec || '未指定';
-                            payload['單位'] = legacyItem.unit || '台';
+                        if (!payload.category && !payload.attributes) {
+                            // 舊版屬性整合進 attributes
+                            payload.category = parsed.options ? "預設大類" : "電腦設備";
+                            payload.attributes = {};
+                            
+                            const legacyFields = ['機器種類', '品牌', '型號', '規格描述', '單位'];
+                            legacyFields.forEach(f => {
+                                if (payload[f] !== undefined) {
+                                    payload.attributes[f] = payload[f];
+                                    delete payload[f];
+                                }
+                            });
                         }
                         
                         await db.collection("inventory").doc(invId).set(payload); 
@@ -3115,13 +3477,17 @@
                     
                     for(let tx of (parsed.transactions || [])) { 
                         let payload = { ...tx };
-                        if (parsed.items) {
-                            const legacyItem = parsed.items.find(i => i.id === tx.itemId) || {};
-                            payload['機器種類'] = legacyItem.type || '未指定';
-                            payload['品牌'] = legacyItem.brand || '未指定';
-                            payload['型號'] = legacyItem.model || '未指定';
-                            payload['規格描述'] = legacyItem.spec || '未指定';
-                            payload['單位'] = legacyItem.unit || '台';
+                        if (!payload.category && !payload.attributes) {
+                            payload.category = parsed.options ? "預設大類" : "電腦設備";
+                            payload.attributes = {};
+                            
+                            const legacyFields = ['機器種類', '品牌', '型號', '規格描述', '單位'];
+                            legacyFields.forEach(f => {
+                                if (payload[f] !== undefined) {
+                                    payload.attributes[f] = payload[f];
+                                    delete payload[f];
+                                }
+                            });
                         }
                         await db.collection("transactions").doc(tx.id).set(payload); 
                     }
@@ -3136,7 +3502,7 @@
             reader.readAsText(fileInput.files[0]);
         }
 
-        // ==========================================
+                // ==========================================
         // 手機版側邊欄抽屜開關邏輯
         // ==========================================
         function openSidebar() {
@@ -3271,6 +3637,8 @@
             document.getElementById('mat-search').addEventListener('keyup', renderOptionsPage);
 
             // 庫存篩選與搜尋
+            if (document.getElementById('tx-category')) document.getElementById('tx-category').addEventListener('change', renderTransactionFormFields);
+            if (document.getElementById('inv-filter-category')) document.getElementById('inv-filter-category').addEventListener('change', renderInventory);
             document.getElementById('inv-search').addEventListener('keyup', renderInventory); 
             document.getElementById('inv-filter-status').addEventListener('change', renderInventory); 
             document.getElementById('inv-filter-floor').addEventListener('change', () => {
@@ -3518,20 +3886,29 @@
 
             document.getElementById('form-add-mat').addEventListener('submit', async (e) => {
                 e.preventDefault();
+                if (!activeCategoryId) return showToast("請先選取大類項目！", "danger");
+                
                 const name = document.getElementById('new-opt-name').value.trim();
                 const required = document.getElementById('new-opt-required').value === 'true';
                 const valuesStr = document.getElementById('new-opt-values').value.trim();
                 
                 if (!name) return showToast("欄位名稱為必填項目！", "danger");
-                if (cache.options.some(o => o.id === name)) {
-                    return showToast(`屬性欄位「${name}」已存在，請勿重複建立！`, "danger");
+                
+                const cat = cache.categories.find(c => c.id === activeCategoryId);
+                if (!cat) return showToast("大類不存在！", "danger");
+                
+                if (cat.fields && cat.fields.some(f => f.name === name)) {
+                    return showToast(`屬性欄位「${name}」在此大類已存在，請勿重複建立！`, "danger");
                 }
                 
                 const values = valuesStr ? valuesStr.split(',').map(v => v.trim()).filter(v => v) : [];
                 
                 showLoading(true, "雲端屬性欄位建立中...");
                 try {
-                    await db.collection("options").doc(name).set({ id: name, required, values, order: cache.options.length * 10 });
+                    if (!cat.fields) cat.fields = [];
+                    cat.fields.push({ name, required, values });
+                    
+                    await db.collection("categories").doc(activeCategoryId).update({ fields: cat.fields });
                     showToast(`屬性欄位「${name}」已成功建立！`, "success");
                     document.getElementById('modal-add-material').style.display = 'none';
                     document.getElementById('form-add-mat').reset();
@@ -3544,7 +3921,7 @@
                 }
             });
 
-            // =======================================================
+                    // =======================================================
             // 綁定工程重設事件
             document.getElementById('btn-eng-reset').addEventListener('click', engineeringResetDatabase);
             // =======================================================
@@ -3575,7 +3952,7 @@
             
             showLoading(true, "雲端資料庫整批清空中...");
             try {
-                const collections = ['items', 'locations', 'inventory', 'transactions'];
+                const collections = ['categories', 'locations', 'inventory', 'transactions'];
                 let deletedCount = 0;
                 
                 for (let col of collections) {
@@ -3599,7 +3976,8 @@
                 showLoading(false);
             }
         }
-        // =======================================================
+
+                // =======================================================
 
         window.onload = init;
     </script>
