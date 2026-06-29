@@ -815,7 +815,7 @@
                 <i data-lucide="clipboard-check"></i> 盤點作業
             </li>
             <li class="nav-item" id="menu-labels">
-                <i data-lucide="printer"></i> 標籤列印
+                <i data-lucide="file-spreadsheet"></i> 報表輸出
             </li>
             <li class="nav-item" id="menu-data">
                 <i data-lucide="settings"></i> 系統設定與備份
@@ -1239,16 +1239,42 @@
                 </div>
             </div>
 
-            <!-- 7. 標籤列印頁面 -->
+            <!-- 7. 報表輸出與下載頁面 -->
             <div id="labels" class="page">
                 <div class="panel">
-                    <h3><i data-lucide="printer"></i> 高清晰儲位與層架實體標籤</h3>
-                    <div class="form-row" style="margin-top: 15px;">
-                        <div class="form-group"><label>樓層</label><select id="lbl-floor" class="form-control"><option value="B1">B1 (地下室)</option><option value="1F">1F (地上室)</option></select></div>
-                        <div class="form-group"><label>層架</label><select id="lbl-shelf" class="form-control"><option value="ALL">全部層架</option></select></div>
-                        <div class="form-group"><label>標籤列印類型</label><select id="lbl-type" class="form-control"><option value="BIG">層架大標籤 (例如: A架)</option><option value="SMALL">每層儲位小標籤 (例如: B1-A-01)</option><option value="BOTH">混合輸出大+小標籤</option></select></div>
+                    <h3><i data-lucide="file-spreadsheet"></i> 雲端倉儲報表中心</h3>
+                    <p style="margin-bottom: 20px; font-size: 0.85rem; color: var(--text-muted);">
+                        您可以在此將系統內的雲端即時資料庫匯出成 CSV 格式的電子表格報表，並下載至本機電腦中以便使用 Excel、Google 試算表等工具開啟與統計。
+                    </p>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px;">
+                        <!-- 報表卡片 1：庫存明細 -->
+                        <div class="panel" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-left: 4px solid var(--success); display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <h4 style="margin-bottom: 8px;"><i data-lucide="layers" style="color: var(--success); vertical-align: middle;"></i> 即時庫存明細報表</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">包含目前在庫所有設備之儲位、唯一物品編號、品牌、型號、規格、庫存量、狀態等完整資料。</p>
+                            </div>
+                            <button class="btn btn-success" style="width: 100%; height: 38px;" onclick="exportInventoryReport()"><i data-lucide="download"></i> 下載庫存 CSV 報表</button>
+                        </div>
+
+                        <!-- 報表卡片 2：交易紀錄 -->
+                        <div class="panel" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-left: 4px solid var(--primary); display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <h4 style="margin-bottom: 8px;"><i data-lucide="arrow-left-right" style="color: var(--primary); vertical-align: middle;"></i> 歷史出入庫交易明細報表</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">包含所有入庫、出庫、移位、借出與歸還的歷史異動歷程、時間、交易量、經手人與自訂備註。</p>
+                            </div>
+                            <button class="btn btn-primary" style="width: 100%; height: 38px;" onclick="exportTransactionReport()"><i data-lucide="download"></i> 下載交易 CSV 報表</button>
+                        </div>
+
+                        <!-- 報表卡片 3：儲位主檔 -->
+                        <div class="panel" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-left: 4px solid var(--accent); display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <h4 style="margin-bottom: 8px;"><i data-lucide="map-pin" style="color: var(--accent); vertical-align: middle;"></i> 倉庫儲位配置明細報表</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">匯出目前倉庫中所有已啟用的儲位編號、所屬樓層、層架位置以及第幾層設定的清單。</p>
+                            </div>
+                            <button class="btn btn-accent" style="width: 100%; height: 38px;" onclick="exportLocationReport()"><i data-lucide="download"></i> 下載儲位 CSV 報表</button>
+                        </div>
                     </div>
-                    <button class="btn btn-accent" id="btn-print-labels"><i data-lucide="printer"></i> 生成並開啟列印預覽</button>
                 </div>
             </div>
 
@@ -1308,8 +1334,7 @@
         </div>
     </div>
 
-    <!-- 標籤列印隱藏區 (列印時才顯示) -->
-    <div id="print-area"></div>
+
 
     <!-- 掃描條碼 Modal -->
     <div id="scanner-modal" class="modal-overlay" style="display: none;">
@@ -1468,11 +1493,11 @@
         window.deviceId = deviceId;
 
         const DEFAULT_OPTIONS = [
-            { id: '機器種類', required: true, values: ['筆記型電腦', '桌上型電腦', '伺服器', '印表機', '交換器', '路由器'] },
-            { id: '品牌', required: true, values: ['Apple', 'ASUS', 'Dell', 'Cisco', 'HP', 'Lenovo'] },
-            { id: '型號', required: false, values: ['MacBook Pro 14', 'ExpertBook B9', 'OptiPlex 7010', 'Catalyst 9300', 'LaserJet Pro'] },
-            { id: '規格描述', required: false, values: ['16G/512G', '8G/256G', '32G/1T', '24-Port PoE'] },
-            { id: '單位', required: true, values: ['台', '個', '條', '組', '箱'] }
+            { id: '機器種類', required: true, values: ['筆記型電腦', '桌上型電腦', '伺服器', '印表機', '交換器', '路由器'], order: 10 },
+            { id: '品牌', required: true, values: ['Apple', 'ASUS', 'Dell', 'Cisco', 'HP', 'Lenovo'], order: 20 },
+            { id: '型號', required: false, values: ['MacBook Pro 14', 'ExpertBook B9', 'OptiPlex 7010', 'Catalyst 9300', 'LaserJet Pro'], order: 30 },
+            { id: '規格描述', required: false, values: ['16G/512G', '8G/256G', '32G/1T', '24-Port PoE'], order: 40 },
+            { id: '單位', required: true, values: ['台', '個', '條', '組', '箱'], order: 50 }
         ];
 
         async function init() {
@@ -1565,6 +1590,11 @@
             
             const optSnap = await db.collection("options").get(); 
             cache.options = optSnap.docs.map(d => d.data());
+            // 根據設定之欄位順序排序
+            cache.options.forEach((f, idx) => {
+                if (f.order === undefined) f.order = idx * 10;
+            });
+            cache.options.sort((a, b) => a.order - b.order);
             
             const invSnap = await db.collection("inventory").get(); 
             cache.inventory = invSnap.docs.map(d => d.data());
@@ -1833,7 +1863,7 @@
                 inventory: '即時庫存明細',
                 transactions: '出入庫/移位/借還作業',
                 stocktake: '實體倉庫盤點作業',
-                labels: '標籤生成與列印',
+                labels: '報表輸出中心',
                 data: '系統設定與備份'
             };
             document.getElementById('page-title').innerText = titleMap[pageId] || 'VisionLin WMS';
@@ -2107,10 +2137,16 @@
                 return field.id.toLowerCase().includes(q);
             }).forEach(field => {
                 html += `
-                    <div class="panel" style="border-top: 4px solid var(${field.required ? '--primary' : '--text-muted'}); display: flex; flex-direction: column; justify-content: space-between; min-height: 250px;">
+                    <div class="panel" style="border-top: 4px solid var(${field.required ? '--primary' : '--text-muted'}); display: flex; flex-direction: column; justify-content: space-between; min-height: 260px;">
                         <div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <strong>${field.id}</strong>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <strong>${field.id}</strong>
+                                    <div style="display: flex; gap: 2px;" class="no-print">
+                                        <button class="btn btn-outline" style="padding: 2px 4px; font-size: 0.7rem; height: 20px; min-width: auto; line-height: 1;" onclick="moveOptionField('${field.id}', 'up')" title="上移欄位順序"><i data-lucide="arrow-up" style="width:11px; height:11px;"></i></button>
+                                        <button class="btn btn-outline" style="padding: 2px 4px; font-size: 0.7rem; height: 20px; min-width: auto; line-height: 1;" onclick="moveOptionField('${field.id}', 'down')" title="下移欄位順序"><i data-lucide="arrow-down" style="width:11px; height:11px;"></i></button>
+                                    </div>
+                                </div>
                                 <span class="status-badge ${field.required ? 'bg-normal' : 'bg-pending'}" style="cursor: pointer;" onclick="toggleOptionFieldRequired('${field.id}')">
                                     ${field.required ? '必選 (必填)' : '可選 (選填)'}
                                 </span>
@@ -2141,6 +2177,55 @@
             });
             container.innerHTML = html;
             lucide.createIcons();
+        }
+
+        async function moveOptionField(fieldId, direction) {
+            // 確保所有緩存項目都有 order 屬性
+            cache.options.forEach((f, idx) => {
+                if (f.order === undefined) {
+                    f.order = idx * 10;
+                }
+            });
+            cache.options.sort((a, b) => a.order - b.order);
+            
+            const curIdx = cache.options.findIndex(f => f.id === fieldId);
+            if (curIdx === -1) return;
+            
+            let targetIdx = -1;
+            if (direction === 'up' && curIdx > 0) {
+                targetIdx = curIdx - 1;
+            } else if (direction === 'down' && curIdx < cache.options.length - 1) {
+                targetIdx = curIdx + 1;
+            }
+            
+            if (targetIdx === -1) return; // 無法再移動
+            
+            // 交換 order 欄位值
+            const temp = cache.options[curIdx].order;
+            cache.options[curIdx].order = cache.options[targetIdx].order;
+            cache.options[targetIdx].order = temp;
+            
+            // 如果 order 相等，賦予新的獨立 order
+            if (cache.options[curIdx].order === cache.options[targetIdx].order) {
+                cache.options[curIdx].order = curIdx * 10 + (direction === 'up' ? -5 : 5);
+            }
+            
+            showLoading(true, "調整屬性欄位順序中...");
+            try {
+                const batch = db.batch();
+                batch.set(db.collection("options").doc(cache.options[curIdx].id), { order: cache.options[curIdx].order }, { merge: true });
+                batch.set(db.collection("options").doc(cache.options[targetIdx].id), { order: cache.options[targetIdx].order }, { merge: true });
+                await batch.commit();
+                await syncCache();
+                renderOptionsPage();
+                buildDropdowns(); // 即時重新渲染出入庫欄位順序
+                renderInventory(); // 即時重新渲染即時庫存表格欄位順序
+                showToast("欄位順序已調整！", "success");
+            } catch (err) {
+                showToast("順序調整失敗：" + err.message, "danger");
+            } finally {
+                showLoading(false);
+            }
         }
 
         async function toggleOptionFieldRequired(fieldId) {
@@ -2438,14 +2523,18 @@
                 });
                 
                 showToast("雲端安全交易處理成功！", "success"); 
-                document.getElementById('tx-form').reset(); 
-                document.getElementById('tx-date').value = new Date().toISOString().slice(0, 16);
-                // 還原操作人員
-                const lastUser = safeLocalStorage.getItem("visionlin_wms_last_user");
-                if (lastUser && document.getElementById('tx-user')) document.getElementById('tx-user').value = lastUser;
-                // 重新同步樓層連動儲位
-                syncTxLocationOptions('');
-                syncTxLocationOptions('new-');
+                
+                // 保留上一次選擇以利連續登錄，僅清空物品編號/唯一碼與交易數量，並自動聚焦方便連續掃描
+                const assetIdEl = document.getElementById('tx-asset-id');
+                const qtyEl = document.getElementById('tx-qty');
+                if (assetIdEl) {
+                    assetIdEl.value = '';
+                    assetIdEl.focus(); // 提交後自動聚焦到「物品編號」欄位，方便條碼槍連續掃描
+                }
+                if (qtyEl) {
+                    qtyEl.value = '1';
+                }
+                
                 await syncCache(); 
             } catch (err) { 
                 showToast(`交易處理失敗：${err.message}`, "danger"); 
@@ -2796,48 +2885,103 @@
         // ==========================================
         // 7. 標籤與備份還原
         // ==========================================
-        function generatePrintLabels() {
-            const floor = document.getElementById('lbl-floor').value; 
-            const shelf = document.getElementById('lbl-shelf').value; 
-            const type = document.getElementById('lbl-type').value;
+        // ==========================================
+        // 7. 報表匯出與 CSV 下載功能 (加載 BOM 避免 Excel 亂碼)
+        // ==========================================
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+        }
+
+        function exportInventoryReport() {
+            // 標頭欄位包含靜態欄位 + 所有動態選項設定屬性
+            const dynamicHeaders = cache.options.map(o => o.id);
+            const headers = ["儲位", "物品編號/唯一碼", ...dynamicHeaders, "數量", "狀態", "最後更新時間"];
             
-            let targets = cache.locations.filter(l => l.floor === floor); 
-            if(shelf !== 'ALL') targets = targets.filter(l => l.shelf === shelf);
+            let csvRows = [headers.map(h => `"${h}"`).join(",")];
             
-            if(targets.length === 0) return showToast("所選範圍內無任何啟用的儲位標籤。", "warning");
+            cache.inventory.forEach(inv => {
+                const dynamicVals = cache.options.map(o => inv[o.id] !== undefined ? `"${inv[o.id]}"` : '""');
+                const row = [
+                    `"${inv.locationId}"`,
+                    `"${inv.itemId || inv.assetId || '-'}"`,
+                    ...dynamicVals,
+                    `"${inv.quantity}"`,
+                    `"${inv.status}"`,
+                    `"${inv.lastUpdated || '-'}"`
+                ];
+                csvRows.push(row.join(","));
+            });
             
-            let html = '<div class="label-page">';
-            if(['BIG', 'BOTH'].includes(type)) {
-                [...new Set(targets.map(t => t.shelf))].sort().forEach(s => {
-                    const group = targets.filter(t => t.shelf === s).sort((a,b)=>a.layer.localeCompare(b.layer));
-                    html += `
-                        <div class="label-big">
-                            <div class="label-big-left">
-                                <h1>${floor}-${s}</h1>
-                                <h2>${floor==='B1'?'B1 地下室':'1F 一樓'} ${s} 架</h2>
-                                <p>儲位範圍：${group[0].id} ～ ${group[group.length-1].id}</p>
-                            </div>
-                            <div class="qr-box">QR CODE</div>
-                        </div>
-                    `;
+            downloadCSV(csvRows.join("\n"), `庫存明細報表_${new Date().toISOString().slice(0, 10)}.csv`);
+            showToast("庫存明細報表導出成功！", "success");
+        }
+
+        function exportTransactionReport() {
+            // 標頭欄位包含靜態欄位 + 所有動態選項設定屬性
+            const dynamicHeaders = cache.options.map(o => o.id);
+            const headers = ["交易單號", "交易時間", "交易類型", "物品編號/唯一碼", ...dynamicHeaders, "數量", "起點儲位/來源", "新目標儲位(移位)", "狀態", "經手人", "備註"];
+            
+            let csvRows = [headers.map(h => `"${h}"`).join(",")];
+            
+            cache.transactions.forEach(tx => {
+                const dynamicVals = cache.options.map(o => tx[o.id] !== undefined ? `"${tx[o.id]}"` : '""');
+                
+                // 轉換交易類型中文
+                let typeText = tx.type;
+                if(tx.type === 'in') typeText = '入庫';
+                else if(tx.type === 'out') typeText = '出庫';
+                else if(tx.type === 'move') typeText = '移位';
+                else if(tx.type === 'borrow') typeText = '借出';
+                else if(tx.type === 'return') typeText = '歸還';
+                
+                const row = [
+                    `"${tx.id}"`,
+                    `"${tx.date}"`,
+                    `"${typeText}"`,
+                    `"${tx.itemId}"`,
+                    ...dynamicVals,
+                    `"${tx.quantity}"`,
+                    `"${tx.locationId}"`,
+                    `"${tx.newLocationId || '-'}"`,
+                    `"${tx.status}"`,
+                    `"${tx.user || '-'}"`,
+                    `"${tx.note || '-'}"`
+                ];
+                csvRows.push(row.join(","));
+            });
+            
+            downloadCSV(csvRows.join("\n"), `歷史出入庫交易報表_${new Date().toISOString().slice(0, 10)}.csv`);
+            showToast("歷史交易報表導出成功！", "success");
+        }
+
+        function exportLocationReport() {
+            const headers = ["儲位編號", "樓層", "層架", "層數", "使用狀態"];
+            let csvRows = [headers.map(h => `"${h}"`).join(",")];
+            
+            cache.locations
+                .sort((a,b) => a.id.localeCompare(b.id))
+                .forEach(loc => {
+                    const row = [
+                        `"${loc.id}"`,
+                        `"${loc.floor}"`,
+                        `"${loc.shelf}"`,
+                        `"${loc.layer}"`,
+                        `"${loc.status}"`
+                    ];
+                    csvRows.push(row.join(","));
                 });
-            }
-            if(['SMALL', 'BOTH'].includes(type)) {
-                targets.sort((a,b)=>a.id.localeCompare(b.id)).forEach(l => {
-                    html += `
-                        <div class="label-small">
-                            <div class="label-small-left">
-                                <h2>${l.id}</h2>
-                                <p>${floor==='B1'?'B1 地下室':'1F 一樓'} ${l.shelf} 架第 ${Number(l.layer)} 層</p>
-                            </div>
-                            <div class="qr-box small">QR</div>
-                        </div>
-                    `;
-                });
-            }
-            html += '</div>'; 
-            document.getElementById('print-area').innerHTML = html; 
-            window.print();
+                
+            downloadCSV(csvRows.join("\n"), `倉庫儲位配置報表_${new Date().toISOString().slice(0, 10)}.csv`);
+            showToast("儲位配置報表導出成功！", "success");
         }
 
         function backupExport() {
@@ -3188,7 +3332,6 @@
             };
 
             // 其他功能事件
-            document.getElementById('btn-print-labels').addEventListener('click', generatePrintLabels); 
             document.getElementById('btn-exp-all').addEventListener('click', backupExport); 
             document.getElementById('btn-import-all').addEventListener('click', triggerImportJson);
 
@@ -3326,7 +3469,7 @@
                 
                 showLoading(true, "雲端屬性欄位建立中...");
                 try {
-                    await db.collection("options").doc(name).set({ id: name, required, values });
+                    await db.collection("options").doc(name).set({ id: name, required, values, order: cache.options.length * 10 });
                     showToast(`屬性欄位「${name}」已成功建立！`, "success");
                     document.getElementById('modal-add-material').style.display = 'none';
                     document.getElementById('form-add-mat').reset();
