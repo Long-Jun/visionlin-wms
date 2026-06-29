@@ -1879,7 +1879,6 @@
             syncInventoryFilters('floor');
             syncLocationFilters();
             syncShelfFilters('st');
-            syncShelfFilters('lbl');
             renderTransactionFormFields();
 
             // 初始化出入庫的樓層連動儲位下拉選單
@@ -3283,9 +3282,6 @@
             // 盤點與標籤之樓層與層架連動
             document.getElementById('st-floor').addEventListener('change', () => {
                 syncShelfFilters('st');
-            });
-            document.getElementById('lbl-floor').addEventListener('change', () => {
-                syncShelfFilters('lbl');
             });
 
             // 操作人員姓名跨頁面與手機/電腦模式即時同步
