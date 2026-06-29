@@ -809,7 +809,7 @@
                 <i data-lucide="layers"></i> 庫存明細
             </li>
             <li class="nav-item" id="menu-transactions">
-                <i data-lucide="arrow-left-right"></i> 出入庫/移位作業
+                <i data-lucide="arrow-left-right"></i> 入庫作業
             </li>
             <li class="nav-item" id="menu-stocktake">
                 <i data-lucide="clipboard-check"></i> 盤點作業
@@ -838,7 +838,7 @@
     <div class="mobile-nav no-print">
         <div class="mobile-nav-item" id="mob-menu-transactions">
             <i data-lucide="arrow-left-right"></i>
-            <span>出入庫</span>
+            <span>入庫作業</span>
         </div>
         <div class="mobile-nav-item" id="mob-menu-inventory">
             <i data-lucide="layers"></i>
@@ -892,7 +892,19 @@
             <div id="dashboard" class="page active">
                 <div class="dashboard-cards" id="dash-cards"></div>
                 <div class="panel">
-                    <h3><i data-lucide="history"></i> 雲端即時異動紀錄 (最新50筆)</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;" class="no-print">
+                        <h3><i data-lucide="history"></i> 雲端即時異動紀錄</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">顯示筆數：</label>
+                            <select id="dash-tx-limit" class="form-control" style="width: 130px; height: 32px; padding: 2px 8px; font-size: 0.85rem;" onchange="changeTxLimit(this.value)">
+                                <option value="50">最新 50 筆</option>
+                                <option value="100">最新 100 筆</option>
+                                <option value="1000">最新 1000 筆</option>
+                                <option value="5000">最新 5000 筆</option>
+                                <option value="10000">最新 10000 筆</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="table-responsive" style="margin-top: 15px;">
                         <table id="dash-tx-table">
                             <thead>
@@ -1021,10 +1033,10 @@
                 </div>
             </div>
 
-            <!-- 5. 出入庫/移位作業頁面 -->
+            <!-- 5. 入庫作業頁面 -->
             <div id="transactions" class="page">
                 <div class="panel">
-                    <h3><i data-lucide="edit-3"></i> 庫存連線作業表單 (並發交易防衝突)</h3>
+                    <h3><i data-lucide="edit-3"></i> 入庫作業表單 (並發交易防衝突)</h3>
                     <form id="tx-form" style="margin-top: 20px;">
                         <div class="form-row">
                             <div class="form-group">
@@ -1059,7 +1071,7 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>交易數量 *</label>
+                                <label>入庫數量 *</label>
                                 <input type="number" id="tx-qty" class="form-control" required min="0.01" step="0.01" placeholder="輸入數量" value="1">
                             </div>
                             <div class="form-group">
@@ -1262,6 +1274,17 @@
                             <div>
                                 <h4 style="margin-bottom: 8px;"><i data-lucide="arrow-left-right" style="color: var(--primary); vertical-align: middle;"></i> 歷史出入庫交易明細報表</h4>
                                 <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">包含所有入庫、出庫、移位、借出與歸還的歷史異動歷程、時間、交易量、經手人與自訂備註。</p>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                                    <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); white-space: nowrap;">匯出筆數：</label>
+                                    <select id="rpt-tx-limit" class="form-control" style="height: 32px; padding: 2px 8px; font-size: 0.85rem; width: 100%;">
+                                        <option value="50">最近 50 筆</option>
+                                        <option value="100">最近 100 筆</option>
+                                        <option value="1000">最近 1000 筆</option>
+                                        <option value="5000">最近 5000 筆</option>
+                                        <option value="10000">最近 10000 筆</option>
+                                        <option value="all">全部歷史紀錄</option>
+                                    </select>
+                                </div>
                             </div>
                             <button class="btn btn-primary" style="width: 100%; height: 38px;" onclick="exportTransactionReport()"><i data-lucide="download"></i> 下載交易 CSV 報表</button>
                         </div>
@@ -1599,10 +1622,33 @@
             const invSnap = await db.collection("inventory").get(); 
             cache.inventory = invSnap.docs.map(d => d.data());
             
-            const txSnap = await db.collection("transactions").get(); 
-            cache.transactions = txSnap.docs.map(d => d.data()).sort((a,b) => b.date.localeCompare(a.date));
-
+            // 讀取儀表板設定的交易歷史筆數限制 (預設50筆)
+            const limitEl = document.getElementById('dash-tx-limit');
+            const limitVal = limitEl ? limitEl.value : '50';
+            
+            const txSnap = await db.collection("transactions")
+                .orderBy("date", "desc")
+                .limit(Number(limitVal))
+                .get();
+            cache.transactions = txSnap.docs.map(d => d.data());
             buildDropdowns();
+        }
+
+        async function changeTxLimit(limit) {
+            showLoading(true, "自雲端讀取最新交易紀錄中...");
+            try {
+                const txSnap = await db.collection("transactions")
+                    .orderBy("date", "desc")
+                    .limit(Number(limit))
+                    .get();
+                cache.transactions = txSnap.docs.map(d => d.data());
+                renderDashboard();
+                showToast(`已成功載入最新 ${limit} 筆交易紀錄。`, "success");
+            } catch (err) {
+                showToast("讀取雲端交易紀錄失敗：" + err.message, "danger");
+            } finally {
+                showLoading(false);
+            }
         }
 
         // ==========================================
@@ -1861,7 +1907,7 @@
                 locations: '倉庫儲位主檔',
                 materials: '庫存選項設定',
                 inventory: '即時庫存明細',
-                transactions: '出入庫/移位/借還作業',
+                transactions: '入庫作業',
                 stocktake: '實體倉庫盤點作業',
                 labels: '報表輸出中心',
                 data: '系統設定與備份'
@@ -2524,7 +2570,7 @@
                 
                 showToast("雲端安全交易處理成功！", "success"); 
                 
-                // 保留上一次選擇以利連續登錄，僅清空物品編號/唯一碼與交易數量，並自動聚焦方便連續掃描
+                // 保留上一次選擇以利連續登錄，僅清空物品編號/唯一碼與入庫數量，並自動聚焦方便連續掃描
                 const assetIdEl = document.getElementById('tx-asset-id');
                 const qtyEl = document.getElementById('tx-qty');
                 if (assetIdEl) {
@@ -2925,42 +2971,57 @@
             showToast("庫存明細報表導出成功！", "success");
         }
 
-        function exportTransactionReport() {
-            // 標頭欄位包含靜態欄位 + 所有動態選項設定屬性
-            const dynamicHeaders = cache.options.map(o => o.id);
-            const headers = ["交易單號", "交易時間", "交易類型", "物品編號/唯一碼", ...dynamicHeaders, "數量", "起點儲位/來源", "新目標儲位(移位)", "狀態", "經手人", "備註"];
-            
-            let csvRows = [headers.map(h => `"${h}"`).join(",")];
-            
-            cache.transactions.forEach(tx => {
-                const dynamicVals = cache.options.map(o => tx[o.id] !== undefined ? `"${tx[o.id]}"` : '""');
+        async function exportTransactionReport() {
+            const limit = document.getElementById('rpt-tx-limit').value;
+            showLoading(true, "自雲端擷取交易紀錄報表中...");
+            try {
+                let txQuery = db.collection("transactions").orderBy("date", "desc");
+                if (limit !== 'all') {
+                    txQuery = txQuery.limit(Number(limit));
+                }
+                const txSnap = await txQuery.get();
+                const txData = txSnap.docs.map(d => d.data());
                 
-                // 轉換交易類型中文
-                let typeText = tx.type;
-                if(tx.type === 'in') typeText = '入庫';
-                else if(tx.type === 'out') typeText = '出庫';
-                else if(tx.type === 'move') typeText = '移位';
-                else if(tx.type === 'borrow') typeText = '借出';
-                else if(tx.type === 'return') typeText = '歸還';
+                // 標頭欄位包含靜態欄位 + 所有動態選項設定屬性
+                const dynamicHeaders = cache.options.map(o => o.id);
+                const headers = ["交易單號", "交易時間", "交易類型", "物品編號/唯一碼", ...dynamicHeaders, "數量", "起點儲位/來源", "新目標儲位(移位)", "狀態", "經手人", "備註"];
                 
-                const row = [
-                    `"${tx.id}"`,
-                    `"${tx.date}"`,
-                    `"${typeText}"`,
-                    `"${tx.itemId}"`,
-                    ...dynamicVals,
-                    `"${tx.quantity}"`,
-                    `"${tx.locationId}"`,
-                    `"${tx.newLocationId || '-'}"`,
-                    `"${tx.status}"`,
-                    `"${tx.user || '-'}"`,
-                    `"${tx.note || '-'}"`
-                ];
-                csvRows.push(row.join(","));
-            });
-            
-            downloadCSV(csvRows.join("\n"), `歷史出入庫交易報表_${new Date().toISOString().slice(0, 10)}.csv`);
-            showToast("歷史交易報表導出成功！", "success");
+                let csvRows = [headers.map(h => `"${h}"`).join(",")];
+                
+                txData.forEach(tx => {
+                    const dynamicVals = cache.options.map(o => tx[o.id] !== undefined ? `"${tx[o.id]}"` : '""');
+                    
+                    // 轉換交易類型中文
+                    let typeText = tx.type;
+                    if(tx.type === 'in') typeText = '入庫';
+                    else if(tx.type === 'out') typeText = '出庫';
+                    else if(tx.type === 'move') typeText = '移位';
+                    else if(tx.type === 'borrow') typeText = '借出';
+                    else if(tx.type === 'return') typeText = '歸還';
+                    
+                    const row = [
+                        `"${tx.id}"`,
+                        `"${tx.date}"`,
+                        `"${typeText}"`,
+                        `"${tx.itemId}"`,
+                        ...dynamicVals,
+                        `"${tx.quantity}"`,
+                        `"${tx.locationId}"`,
+                        `"${tx.newLocationId || '-'}"`,
+                        `"${tx.status}"`,
+                        `"${tx.user || '-'}"`,
+                        `"${tx.note || '-'}"`
+                    ];
+                    csvRows.push(row.join(","));
+                });
+                
+                downloadCSV(csvRows.join("\n"), `歷史出入庫交易報表_${new Date().toISOString().slice(0, 10)}.csv`);
+                showToast("歷史交易報表導出成功！", "success");
+            } catch (err) {
+                showToast("導出交易報表失敗：" + err.message, "danger");
+            } finally {
+                showLoading(false);
+            }
         }
 
         function exportLocationReport() {
