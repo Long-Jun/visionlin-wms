@@ -1157,8 +1157,9 @@
                                     <th>料號</th>
                                     <th>品名</th>
                                     <th>系統數量</th>
-                                    <th>狀態</th>
+                                    <th>原狀態</th>
                                     <th style="width: 130px;">實盤數量</th>
+                                    <th style="width: 140px;">實盤狀態</th>
                                     <th>差異</th>
                                 </tr>
                             </thead>
@@ -1205,7 +1206,7 @@
                             <div style="display: flex; align-items: center; gap: 6px;">
                                 <button class="btn btn-outline" id="btn-qty-dec-10" style="padding: 12px 14px; font-weight: bold;">-10</button>
                                 <button class="btn btn-outline" id="btn-qty-dec-1" style="padding: 12px 14px; font-weight: bold;">-1</button>
-                                <input type="number" id="st-mob-real-qty" class="form-control" style="text-align: center; font-size: 1.4rem; font-weight: bold; flex-grow: 1; height: 48px;" value="100">
+                                <input type="number" id="st-mob-real-qty" class="form-control" style="text-align: center; font-size: 1.4rem; font-weight: bold; flex-grow: 1; height: 48px;" value="100" min="0" step="0.01">
                                 <button class="btn btn-outline" id="btn-qty-inc-1" style="padding: 12px 14px; font-weight: bold;">+1</button>
                                 <button class="btn btn-outline" id="btn-qty-inc-10" style="padding: 12px 14px; font-weight: bold;">+10</button>
                             </div>
@@ -2505,6 +2506,15 @@
                             <td><span style="font-weight:600;">${row.quantity}</span> ${row.unit||'pcs'}</td>
                             <td><span class="status-badge bg-normal">${row.status}</span></td>
                             <td><input type="number" class="form-control st-input" data-idx="${idx}" value="${row.realQty}" min="0" step="0.01" style="width:100px; height: 32px; padding: 2px 8px;"></td>
+                            <td>
+                                <select class="form-control st-status-select" data-idx="${idx}" style="width: 110px; height: 32px; padding: 2px 8px;">
+                                    <option value="正常" ${row.realStatus === '正常' ? 'selected' : ''}>正常</option>
+                                    <option value="待驗" ${row.realStatus === '待驗' ? 'selected' : ''}>待驗</option>
+                                    <option value="待修" ${row.realStatus === '待修' ? 'selected' : ''}>待修</option>
+                                    <option value="報廢" ${row.realStatus === '報廢' ? 'selected' : ''}>報廢</option>
+                                    <option value="其他" ${(!['正常', '待驗', '待修', '報廢'].includes(row.realStatus)) ? 'selected' : ''}>其他...</option>
+                                </select>
+                            </td>
                             <td id="st-diff-${idx}" style="font-weight:bold;">0</td>
                         </tr>
                     `; 
@@ -2686,10 +2696,25 @@
 
             // 如果有指定填寫的 input 欄位
             if (window.scannerTargetField) {
-                const el = document.getElementById(window.scannerTargetField);
-                if (el) {
-                    el.value = decodedText;
-                    el.dispatchEvent(new Event('blur')); // 觸發自動查詢
+                if (window.scannerTargetField === 'tx-loc' || window.scannerTargetField === 'tx-new-loc') {
+                    const prefix = window.scannerTargetField === 'tx-new-loc' ? 'new-' : '';
+                    const floorEl = document.getElementById(`tx-${prefix}floor`);
+                    const locEl = document.getElementById(`tx-${prefix}loc`);
+                    if (floorEl && locEl) {
+                        const parts = decodedText.split('-');
+                        if (parts.length > 0 && (parts[0] === '1F' || parts[0] === 'B1')) {
+                            floorEl.value = parts[0];
+                            syncTxLocationOptions(prefix);
+                        }
+                        locEl.value = decodedText;
+                        locEl.dispatchEvent(new Event('change'));
+                    }
+                } else {
+                    const el = document.getElementById(window.scannerTargetField);
+                    if (el) {
+                        el.value = decodedText;
+                        el.dispatchEvent(new Event('blur')); // 觸發自動查詢
+                    }
                 }
                 return;
             }
@@ -2816,11 +2841,14 @@
         }
 
         function backupExport() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cache, null, 2));
+            const jsonStr = JSON.stringify(cache, null, 2);
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
             const dlAnchor = document.createElement('a'); 
-            dlAnchor.setAttribute("href", dataStr); 
+            dlAnchor.setAttribute("href", url); 
             dlAnchor.setAttribute("download", `visionlin_erp_backup_${Date.now()}.json`); 
             dlAnchor.click();
+            setTimeout(() => URL.revokeObjectURL(url), 100);
             showToast("JSON 備份檔案已成功匯出並下載！", "success");
         }
 
@@ -3196,6 +3224,32 @@
                     diffTd.innerText = (diff > 0 ? "+" : "") + diff; 
                     diffTd.style.color = diff !== 0 ? 'var(--warning)' : 'var(--text-main)'; 
                 } 
+            });
+
+            // 電腦版實盤狀態下拉選單變更
+            document.getElementById('st-table').addEventListener('change', (e) => {
+                if(e.target.classList.contains('st-status-select')) {
+                    const idx = Number(e.target.getAttribute('data-idx'));
+                    let val = e.target.value;
+                    if (val === '其他') {
+                        const custom = prompt("請輸入自訂實盤狀態：", "");
+                        if (custom && custom.trim()) {
+                            val = custom.trim();
+                            let opt = e.target.querySelector(`option[value="${val}"]`);
+                            if (!opt) {
+                                opt = document.createElement('option');
+                                opt.value = val;
+                                opt.innerText = val;
+                                e.target.insertBefore(opt, e.target.lastElementChild);
+                            }
+                            e.target.value = val;
+                        } else {
+                            e.target.value = '正常';
+                            val = '正常';
+                        }
+                    }
+                    currentStocktakeData[idx].realStatus = val;
+                }
             });
 
             // Firebase 設定儲存與重置事件
