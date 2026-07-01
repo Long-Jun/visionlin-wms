@@ -461,6 +461,7 @@
         .bg-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.2); }
         .bg-repair { background: rgba(192, 132, 252, 0.15); color: var(--accent); border: 1px solid rgba(192, 132, 252, 0.2); }
         .bg-scrap { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .bg-unknown { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.25); }
         /* Loading 遮罩與吐司提示 */
         #loading-overlay {
             display: flex;
@@ -1273,6 +1274,7 @@
                             <option value="正常">正常</option>
                             <option value="待驗">待驗</option>
                             <option value="待修">待修</option>
+                            <option value="未知">未知</option>
                             <option value="待報廢">待報廢</option>
                         </select>
                     </div>
@@ -1395,6 +1397,7 @@
                                 <label>設備庫存狀態</label>
                                 <select id="tx-status" class="form-control">
                                     <option value="正常">正常</option>
+                                    <option value="未知">未知</option>
                                     <option value="待修">待修</option>
                                     <option value="報廢">報廢</option>
                                     <option value="其他">其他...</option>
@@ -1505,6 +1508,7 @@
                                 <option value="正常">正常</option>
                                 <option value="待驗">待驗</option>
                                 <option value="待修">待修</option>
+                                <option value="未知">未知</option>
                                 <option value="報廢">報廢</option>
                                 <option value="其他">其他...</option>
                             </select>
@@ -1583,13 +1587,13 @@
                     <h3><i data-lucide="git-branch"></i> 程式碼版本</h3>
                     <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <div>
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.4</div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.5</div>
                             <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.85rem;">更新日期：2026-07-01</div>
                         </div>
                         <span class="status-badge bg-normal">目前版本</span>
                     </div>
                     <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
-                        本版移除入庫作業的手動作業時間欄位，交易送出時改由系統自動記錄台灣時間，與盤點作業一致。
+                        本版新增設備庫存狀態「未知」，並同步到入庫、庫存篩選、盤點狀態異動與儀表板未知狀態設備存量。
                     </p>
                 </div>
 
@@ -2101,7 +2105,7 @@
             
             // 重新填入狀態選項
             let html = '<option value="">所有狀態</option>';
-            const allPossibleStatuses = ["正常", "待驗", "待修", "待報廢"];
+            const allPossibleStatuses = ["正常", "待驗", "待修", "未知", "待報廢", "報廢"];
             allPossibleStatuses.forEach(s => {
                 if (activeStatuses.includes(s)) {
                     html += `<option value="${s}">${s}</option>`;
@@ -2574,7 +2578,7 @@
             setVal('tx-new-layer', lastCache.newLayer);
             syncTxMoveTargetLocation();
             setVal('tx-status', lastCache.status);
-            if (lastCache.status && !['正常', '待驗', '待修', '報廢'].includes(lastCache.status)) {
+            if (lastCache.status && !['正常', '待驗', '待修', '未知', '報廢'].includes(lastCache.status)) {
                 const statusEl = document.getElementById('tx-status');
                 statusEl.value = '其他';
                 statusEl.dispatchEvent(new Event('change'));
@@ -2694,6 +2698,7 @@
             const totalNormal = activeInventory.filter(i => i.status === '正常').length;
             const totalPending = activeInventory.filter(i => i.status === '待驗').length;
             const totalRepair = activeInventory.filter(i => i.status === '待修').length;
+            const totalUnknown = activeInventory.filter(i => i.status === '未知').length;
             const totalScrap = activeInventory.filter(i => i.status === '報廢').length;
             
             // 在庫唯一設備編號數
@@ -2720,6 +2725,11 @@
                     <i data-lucide="wrench" class="card-icon"></i>
                     <h3>待修設備存量</h3>
                     <p>${totalRepair}</p>
+                </div>
+                <div class="card ${totalUnknown > 0 ? 'warning' : 'primary'}">
+                    <i data-lucide="circle-help" class="card-icon"></i>
+                    <h3>未知狀態設備存量</h3>
+                    <p>${totalUnknown}</p>
                 </div>
                 <div class="card ${totalScrap > 0 ? 'danger' : 'primary'}">
                     <i data-lucide="trash-2" class="card-icon"></i>
@@ -2829,7 +2839,7 @@
             
             // 重新填入狀態選項
             let html = '<option value="">所有狀態</option>';
-            const allPossibleStatuses = ["正常", "待驗", "待修", "報廢"];
+            const allPossibleStatuses = ["正常", "待驗", "待修", "未知", "報廢"];
             allPossibleStatuses.forEach(s => {
                 if (activeStatuses.includes(s)) {
                     html += `<option value="${s}">${s}</option>`;
@@ -3344,6 +3354,14 @@
             }
         }
 
+        function getStatusBadgeClass(status) {
+            if (status === '待驗') return 'bg-pending';
+            if (status === '待修') return 'bg-repair';
+            if (status === '未知') return 'bg-unknown';
+            if (status === '待報廢' || status === '報廢') return 'bg-scrap';
+            return 'bg-normal';
+        }
+
         function renderTransactionFormFields() {
             const container = document.getElementById('tx-dynamic-fields');
             if (!container) return;
@@ -3467,10 +3485,7 @@
                 let searchTarget = `${inv.locationId} ${assetId} ${itemCat} ${attributesSearch}`.toLowerCase();
                 if(q && !searchTarget.includes(q)) return;
                 
-                let badgeClass = 'bg-normal';
-                if(inv.status === '待驗') badgeClass = 'bg-pending';
-                if(inv.status === '待修') badgeClass = 'bg-repair';
-                if(inv.status === '待報廢' || inv.status === '報廢') badgeClass = 'bg-scrap';
+                let badgeClass = getStatusBadgeClass(inv.status);
                 let rowHtml = `
                     <tr>
                         <td><strong>${inv.locationId}</strong></td>
@@ -3723,7 +3738,7 @@
                             <td>${row.itemName}</td>
                             <td>${row.spec || '-'}</td>
                             <td>唯一資產</td>
-                            <td><span class="status-badge bg-normal">${row.status}</span></td>
+                            <td><span class="status-badge ${getStatusBadgeClass(row.status)}">${row.status}</span></td>
                             <td>
                                 <select class="form-control st-input" data-idx="${idx}" style="width: 130px; height: 32px; padding: 2px 8px;">
                                     <option value="1" ${row.realQty > 0 ? 'selected' : ''}>保留</option>
@@ -3735,8 +3750,9 @@
                                     <option value="正常" ${row.realStatus === '正常' ? 'selected' : ''}>正常</option>
                                     <option value="待驗" ${row.realStatus === '待驗' ? 'selected' : ''}>待驗</option>
                                     <option value="待修" ${row.realStatus === '待修' ? 'selected' : ''}>待修</option>
+                                    <option value="未知" ${row.realStatus === '未知' ? 'selected' : ''}>未知</option>
                                     <option value="報廢" ${row.realStatus === '報廢' ? 'selected' : ''}>報廢</option>
-                                    <option value="其他" ${(!['正常', '待驗', '待修', '報廢'].includes(row.realStatus)) ? 'selected' : ''}>其他...</option>
+                                    <option value="其他" ${(!['正常', '待驗', '待修', '未知', '報廢'].includes(row.realStatus)) ? 'selected' : ''}>其他...</option>
                                 </select>
                             </td>
                             <td id="st-diff-${idx}" style="font-weight:bold;">保留</td>
@@ -3756,7 +3772,9 @@
             
             document.getElementById('st-mobile-progress').innerText = `盤點進度：項目 ${idx + 1} / ${currentStocktakeData.length}`;
             document.getElementById('st-mob-loc').innerText = item.locationId;
-            document.getElementById('st-mob-status').innerText = item.status;
+            const mobStatusEl = document.getElementById('st-mob-status');
+            mobStatusEl.innerText = item.status;
+            mobStatusEl.className = `status-badge ${getStatusBadgeClass(item.status)}`;
             document.getElementById('st-mob-name').innerText = item.itemBrand ? `${item.itemBrand} ${item.itemModel||''}` : (item.itemName || '未命名項目');
             document.getElementById('st-mob-item').innerText = `物品編號: ${item.itemId || item.assetId || '-'}`;
             document.getElementById('st-mob-spec').innerText = `規格: ${item.spec || '-'}`;
@@ -3770,7 +3788,7 @@
             document.getElementById('st-mob-real-qty').value = Number(item.realQty) <= 0 ? '0' : '1';
             
             // 判斷狀態是否為預設，若非則切換為「其他」並顯示自訂輸入框
-            const stdStatuses = ["正常", "待驗", "待修", "報廢"];
+            const stdStatuses = ["正常", "待驗", "待修", "未知", "報廢"];
             const selectEl = document.getElementById('st-mob-real-status');
             const customInput = document.getElementById('st-mob-custom-status');
             if (stdStatuses.includes(item.realStatus)) {
