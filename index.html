@@ -641,18 +641,17 @@
 
         /* 手機條碼掃描懸浮鈕 */
         .mobile-scan-btn {
-            position: relative;
-            top: -12px;
-            width: 56px;
-            height: 56px;
-            background-color: var(--primary);
-            border-radius: 50%;
+            position: static;
+            width: 22px;
+            height: 22px;
+            background-color: transparent;
+            border-radius: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4), 0 0 0 4px var(--bg-main);
-            z-index: 1000;
+            color: inherit;
+            box-shadow: none;
+            z-index: auto;
             transition: var(--transition);
         }
 
@@ -661,8 +660,8 @@
         }
 
         .mobile-scan-btn i {
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
         }
 
         /* 標籤列印預覽樣式 */
@@ -702,6 +701,12 @@
 
         /* 響應式適配 (RWD Rules) */
         @media (max-width: 768px) {
+            html, body {
+                height: 100dvh;
+                min-height: 100dvh;
+                overflow: hidden;
+            }
+
             .sidebar {
                 display: flex !important; /* 強制保持側欄的 Flex 排版 */
                 position: fixed;
@@ -723,22 +728,90 @@
 
             .mobile-nav {
                 display: grid; /* 顯示手機底部導覽列 */
+                height: calc(58px + env(safe-area-inset-bottom, 0px));
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+                align-items: center;
             }
 
             .content-area {
-                padding: 16px;
+                padding: 12px;
+                padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+                scroll-padding-bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+                -webkit-overflow-scrolling: touch;
             }
 
             .header {
-                padding: 12px 16px;
+                padding: 10px 12px;
+            }
+
+            .panel {
+                padding: 14px;
+                margin-bottom: 14px;
+                border-radius: 8px;
+            }
+
+            .panel h3 {
+                font-size: 1rem;
+                line-height: 1.35;
+            }
+
+            .form-group {
+                margin-bottom: 12px;
+            }
+
+            .form-group label {
+                font-size: 0.78rem;
+            }
+
+            .form-control {
+                min-height: 42px;
+                padding: 9px 11px;
+                font-size: 0.92rem;
+            }
+
+            .btn {
+                min-height: 44px;
+                padding: 9px 12px;
+                font-size: 0.88rem;
+                justify-content: center;
+                white-space: normal;
+                line-height: 1.25;
             }
 
             .dashboard-cards {
                 grid-template-columns: repeat(2, 1fr); /* 儀表板改為兩列 */
+                gap: 10px;
+            }
+
+            .card {
+                padding: 14px;
+                border-radius: 8px;
+            }
+
+            .card p {
+                font-size: 1.35rem;
             }
 
             .form-row {
                 grid-template-columns: 1fr; /* 表單改為單一欄位 */
+                gap: 10px;
+            }
+
+            #tx-form {
+                margin-top: 12px !important;
+            }
+
+            #tx-dynamic-fields {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+
+            #tx-form button[type="submit"],
+            #btn-submit-st,
+            #btn-mob-save-next,
+            #btn-mob-submit {
+                width: 100% !important;
+                margin-bottom: 12px;
             }
 
             #options-container {
@@ -748,6 +821,159 @@
             /* 電腦表格轉為行動版卡片或增加滾動條 */
             .table-responsive table {
                 min-width: 600px;
+            }
+
+            .mobile-nav-item {
+                gap: 2px;
+                font-size: 0.66rem;
+                min-width: 0;
+            }
+
+            .mobile-nav-item i,
+            .mobile-scan-btn,
+            .mobile-scan-btn i {
+                width: 20px;
+                height: 20px;
+            }
+
+            #st-mobile-workspace .panel {
+                padding: 14px !important;
+                margin-bottom: 12px !important;
+            }
+
+            #st-mobile-workspace h3,
+            #st-mob-name {
+                font-size: 1rem !important;
+                line-height: 1.35;
+            }
+
+            #st-mob-loc {
+                font-size: 1.08rem !important;
+            }
+
+            #st-mobile-workspace [style*="font-size: 1.1rem"] {
+                font-size: 0.95rem !important;
+            }
+
+            #st-mobile-workspace [style*="font-size: 0.85rem"],
+            #st-mobile-workspace [style*="font-size: 0.8rem"],
+            #st-mobile-workspace [style*="font-size: 0.75rem"] {
+                font-size: 0.76rem !important;
+            }
+
+            .main-content {
+                min-height: 100dvh;
+                overflow: hidden;
+            }
+
+            .page {
+                padding-bottom: 24px;
+            }
+
+            .mobile-nav {
+                height: calc(54px + env(safe-area-inset-bottom, 0px)) !important;
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.28);
+            }
+
+            .mobile-nav-item {
+                height: 54px;
+                padding: 4px 2px;
+            }
+
+            .mobile-scan-btn {
+                position: static !important;
+                top: auto !important;
+                width: 20px !important;
+                height: 20px !important;
+                border-radius: 0 !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                transform: none !important;
+            }
+
+            .content-area {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                padding-bottom: calc(190px + env(safe-area-inset-bottom, 0px)) !important;
+                scroll-padding-bottom: calc(190px + env(safe-area-inset-bottom, 0px)) !important;
+            }
+
+            #transactions .panel,
+            #stocktake .panel,
+            #data .panel,
+            #labels .panel,
+            #inventory .panel,
+            #materials .panel,
+            #locations .panel {
+                padding: 12px !important;
+                margin-bottom: 12px !important;
+            }
+
+            #transactions .form-row,
+            #stocktake .form-row {
+                gap: 8px !important;
+                margin-top: 10px !important;
+            }
+
+            #tx-lookup-panel,
+            #tx-dynamic-fields {
+                margin-bottom: 10px !important;
+            }
+
+            #tx-form button[type="submit"] {
+                min-height: 50px !important;
+                margin-top: 8px !important;
+                margin-bottom: 36px !important;
+                font-size: 0.92rem !important;
+            }
+
+            #st-mobile-workspace {
+                margin-top: 10px !important;
+                padding-bottom: 96px !important;
+            }
+
+            #st-mobile-workspace > div:last-child {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 8px !important;
+                padding-bottom: 36px !important;
+            }
+
+            #btn-mob-save-next,
+            #btn-mob-submit {
+                width: 100% !important;
+                flex-grow: 0 !important;
+                min-height: 48px !important;
+                padding: 10px 12px !important;
+                font-size: 0.9rem !important;
+                margin-bottom: 0 !important;
+            }
+
+            #btn-submit-st {
+                min-height: 48px !important;
+                margin-bottom: 36px !important;
+            }
+
+            .table-responsive {
+                max-width: 100%;
+                overflow-x: auto;
+            }
+
+            .table-responsive table {
+                min-width: 520px;
+                font-size: 0.82rem;
+            }
+
+            th, td {
+                padding: 10px 12px;
+            }
+
+            .dashboard-cards {
+                grid-template-columns: 1fr 1fr !important;
+            }
+
+            #data .dashboard-cards {
+                grid-template-columns: 1fr !important;
             }
             
             .btn-group {
@@ -1189,7 +1415,7 @@
                 <div class="panel">
                     <h3><i data-lucide="clipboard-check"></i> 即時雲端盤點對帳</h3>
                     <div class="form-row" style="align-items: flex-end; margin-top: 15px;">
-                        <div class="form-group" style="margin-bottom: 0;"><label>盤點樓層</label><select id="st-floor" class="form-control"><option value="B1">B1</option><option value="1F">1F</option><option value="ALL">全部樓層</option></select></div>
+                        <div class="form-group" style="margin-bottom: 0;"><label>盤點樓層</label><select id="st-floor" class="form-control"><option value="ALL" selected>全部樓層</option><option value="B1">B1</option><option value="1F">1F</option></select></div>
                         <div class="form-group" style="margin-bottom: 0;"><label>盤點層架</label><select id="st-shelf" class="form-control"><option value="ALL">全部層架</option></select></div>
                         <button class="btn" id="btn-load-st" style="height: 42px;"><i data-lucide="download"></i> 載入雲端實盤清單</button>
                     </div>
@@ -1370,6 +1596,20 @@
                     </div>
                 </div>
                 
+                <div class="panel">
+                    <h3><i data-lucide="git-branch"></i> 程式碼版本</h3>
+                    <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.0</div>
+                            <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.85rem;">更新日期：2026-07-01</div>
+                        </div>
+                        <span class="status-badge bg-normal">目前版本</span>
+                    </div>
+                    <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
+                        本版包含唯一資產管理、入庫/出庫/移位、盤點刪除/狀態異動、雲端 timeout、台灣時間、手機版版面調整與盤點預設全部樓層。
+                    </p>
+                </div>
+
                 <div class="panel">
                     <h3><i data-lucide="download"></i> 本地 JSON 冷備份</h3>
                     <p style="margin-bottom: 15px; font-size: 0.85rem; color: var(--text-muted);">下載所有雲端資料庫檔案。備份格式為結構化的 JSON 陣列。</p>
@@ -1563,7 +1803,29 @@
             report: 45000,
             importExport: 90000
         };
+        const TAIPEI_TIME_ZONE = "Asia/Taipei";
         let currentTxLookupAsset = null;
+
+        function taipeiDateTimeString(date = new Date()) {
+            return date.toLocaleString("sv-SE", {
+                timeZone: TAIPEI_TIME_ZONE,
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false
+            });
+        }
+
+        function taipeiDateTimeInputValue(date = new Date()) {
+            return taipeiDateTimeString(date).slice(0, 16).replace(" ", "T");
+        }
+
+        function taipeiDateString(date = new Date()) {
+            return taipeiDateTimeString(date).slice(0, 10);
+        }
 
         // 設備唯一識別碼
         let deviceId = safeLocalStorage.getItem("visionlin_wms_device_id");
@@ -1683,7 +1945,7 @@
                         batch.set(ref, {
                             ...ast,
                             locationId: defaultLoc,
-                            lastUpdated: new Date().toISOString().replace('T', ' ').substring(0, 19)
+                            lastUpdated: taipeiDateTimeString()
                         });
                     });
                     
@@ -1708,7 +1970,7 @@
                 document.getElementById('header-device-id').innerText = window.deviceId;
 
                 // 預設填入作業時間
-                document.getElementById('tx-date').value = new Date().toISOString().slice(0, 16);
+                document.getElementById('tx-date').value = taipeiDateTimeInputValue();
                 lucide.createIcons();
             } catch (err) {
                 console.error("Firebase Connection Error", err);
@@ -2179,6 +2441,10 @@
             // 初始化時依據目前所選的樓層與儲位填入各篩選選單
             syncInventoryFilters('floor');
             syncLocationFilters();
+            const stFloorEl = document.getElementById('st-floor');
+            const stShelfEl = document.getElementById('st-shelf');
+            if (stFloorEl && !stFloorEl.dataset.userSelected) stFloorEl.value = 'ALL';
+            if (stShelfEl && !stShelfEl.dataset.userSelected) stShelfEl.value = 'ALL';
             syncShelfFilters('st');
             renderTransactionFormFields();
 
@@ -3414,7 +3680,7 @@
             try {
                 showLoading(true, "雲端修正批次處理中...");
 
-                const date = new Date().toISOString().replace('T',' ').substring(0,19);
+                const date = taipeiDateTimeString();
                 const batches = [];
                 let batch = db.batch();
                 let writeCount = 0;
@@ -3731,7 +3997,7 @@
                 csvRows.push(row.join(","));
             });
             
-            downloadCSV(csvRows.join("\n"), `庫存明細報表_${new Date().toISOString().slice(0, 10)}.csv`);
+            downloadCSV(csvRows.join("\n"), `庫存明細報表_${taipeiDateString()}.csv`);
             showToast("庫存明細報表導出成功！", "success");
         }
 
@@ -3789,7 +4055,7 @@
                     csvRows.push(row.join(","));
                 });
                 
-                downloadCSV(csvRows.join("\n"), `歷史出入庫交易報表_${new Date().toISOString().slice(0, 10)}.csv`);
+                downloadCSV(csvRows.join("\n"), `歷史出入庫交易報表_${taipeiDateString()}.csv`);
                 showToast("歷史交易報表導出成功！", "success");
             } catch (err) {
                 showToast("導出交易報表失敗：" + err.message, "danger");
@@ -3815,7 +4081,7 @@
                     csvRows.push(row.join(","));
                 });
                 
-            downloadCSV(csvRows.join("\n"), `倉庫儲位配置報表_${new Date().toISOString().slice(0, 10)}.csv`);
+            downloadCSV(csvRows.join("\n"), `倉庫儲位配置報表_${taipeiDateString()}.csv`);
             showToast("儲位配置報表導出成功！", "success");
         }
 
@@ -4084,7 +4350,12 @@
 
             // 盤點與標籤之樓層與層架連動
             document.getElementById('st-floor').addEventListener('change', () => {
+                document.getElementById('st-floor').dataset.userSelected = 'true';
+                document.getElementById('st-shelf').dataset.userSelected = 'true';
                 syncShelfFilters('st');
+            });
+            document.getElementById('st-shelf').addEventListener('change', () => {
+                document.getElementById('st-shelf').dataset.userSelected = 'true';
             });
 
             // 操作人員姓名跨頁面與手機/電腦模式即時同步
