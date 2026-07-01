@@ -1593,13 +1593,13 @@
                     <h3><i data-lucide="git-branch"></i> 程式碼版本</h3>
                     <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <div>
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.7</div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.8</div>
                             <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.85rem;">更新日期：2026-07-01</div>
                         </div>
                         <span class="status-badge bg-normal">目前版本</span>
                     </div>
                     <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
-                        本版將物品編號掃描改為明確的大按鈕，與掃描儲位操作一致，方便現場觸控與連續掃描。
+                        本版修正庫存明細掃描儲位時清空搜尋框，並讓手機中間掃描導入庫存明細前先重置所有庫存篩選。
                     </p>
                 </div>
 
@@ -2417,7 +2417,26 @@
             return [];
         }
 
-        function applyLocationScanToInventory(code) {
+        function resetInventoryFilters() {
+            const searchEl = document.getElementById('inv-search');
+            const floorEl = document.getElementById('inv-filter-floor');
+            const shelfEl = document.getElementById('inv-filter-shelf');
+            const locEl = document.getElementById('inv-filter-loc');
+            const catEl = document.getElementById('inv-filter-category');
+            const statusEl = document.getElementById('inv-filter-status');
+
+            if (searchEl) searchEl.value = '';
+            if (catEl) catEl.value = '';
+            if (statusEl) statusEl.value = '';
+            if (floorEl) floorEl.value = '';
+            syncInventoryFilters('floor');
+            if (shelfEl) shelfEl.value = '';
+            syncInventoryFilters('shelf');
+            if (locEl) locEl.value = '';
+            syncStatusFilter();
+        }
+
+        function applyLocationScanToInventory(code, options = {}) {
             const parts = getLocationPartsFromBarcode(code);
             if (parts.length < 2) return false;
 
@@ -2425,6 +2444,13 @@
             const shelfEl = document.getElementById('inv-filter-shelf');
             const locEl = document.getElementById('inv-filter-loc');
             if (!floorEl || !shelfEl || !locEl) return false;
+
+            if (options.resetFilters) {
+                resetInventoryFilters();
+            } else {
+                const searchEl = document.getElementById('inv-search');
+                if (searchEl) searchEl.value = '';
+            }
 
             floorEl.value = parts[0];
             syncInventoryFilters('floor');
@@ -4145,8 +4171,9 @@
                         generateStocktakeList();
                     }
                 } else {
+                    resetInventoryFilters();
                     switchPage('inventory', document.getElementById('menu-inventory'));
-                    if (!applyLocationScanToInventory(decodedText)) {
+                    if (!applyLocationScanToInventory(decodedText, { resetFilters: true })) {
                         document.getElementById('inv-search').value = decodedText;
                         renderInventory();
                     }
@@ -4172,6 +4199,7 @@
                         showToast(`目前載入的盤點範圍不包含此物料 ${decodedText}`, "warning");
                     }
                 } else {
+                    resetInventoryFilters();
                     switchPage('inventory', document.getElementById('menu-inventory'));
                     document.getElementById('inv-search').value = decodedText;
                     renderInventory();
@@ -4183,6 +4211,7 @@
                     maybeAutoQueryScannedAsset();
                 } else {
                     document.getElementById('quick-search').value = decodedText;
+                    resetInventoryFilters();
                     switchPage('inventory', document.getElementById('menu-inventory'));
                     document.getElementById('inv-search').value = decodedText;
                     renderInventory();
