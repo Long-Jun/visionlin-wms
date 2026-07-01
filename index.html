@@ -222,19 +222,6 @@
             animation: fadeIn 0.25s ease-out;
         }
 
-        #data.page.active {
-            display: flex;
-            flex-direction: column;
-        }
-
-        #app-version-panel {
-            order: 0;
-        }
-
-        #firebase-settings-panel {
-            order: 1;
-        }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
@@ -989,19 +976,6 @@
                 grid-template-columns: 1fr !important;
             }
 
-            #data.page.active {
-                display: flex;
-                flex-direction: column;
-            }
-
-            #app-version-panel {
-                order: 0;
-            }
-
-            #firebase-settings-panel {
-                order: 1;
-            }
-            
             .btn-group {
                 width: 100%;
             }
@@ -1613,13 +1587,13 @@
                     <h3><i data-lucide="git-branch"></i> 程式碼版本</h3>
                     <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <div>
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.1</div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.2</div>
                             <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.85rem;">更新日期：2026-07-01</div>
                         </div>
                         <span class="status-badge bg-normal">目前版本</span>
                     </div>
                     <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
-                        本版包含唯一資產管理、入庫/出庫/移位、盤點刪除/狀態異動、雲端 timeout、台灣時間、手機版版面調整、盤點預設全部樓層，以及樓層/層架/儲位階層連動與 Firebase 設定收合。
+                        本版修正系統設定與備份頁面的排序，固定顯示為程式碼版本、Firebase 雲端資料庫設定、本地 JSON 冷備份，並保留樓層/層架/儲位階層連動與 Firebase 設定收合。
                     </p>
                 </div>
 
