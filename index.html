@@ -1249,13 +1249,7 @@
             <div id="inventory" class="page">
                 <div class="panel">
                     <div class="form-row" style="margin-bottom: 15px;">
-                        <div style="position: relative; display: flex; align-items: center;">
-                            <input type="text" id="inv-search" class="form-control" placeholder="搜尋唯一編號/品牌/儲位..." style="padding-left: 36px;">
-                            <i data-lucide="search" style="position: absolute; left: 12px; color: var(--text-muted); width: 16px; height: 16px;"></i>
-                        </div>
-                        <select id="inv-filter-category" class="form-control">
-                            <option value="">所有大類</option>
-                        </select>
+                        <button type="button" class="btn btn-outline" id="btn-scan-inv-loc"><i data-lucide="scan"></i> 掃描儲位</button>
                         <select id="inv-filter-floor" class="form-control">
 
 
@@ -1269,6 +1263,9 @@
                         <select id="inv-filter-loc" class="form-control">
                             <option value="">所有儲位</option>
                         </select>
+                        <select id="inv-filter-category" class="form-control">
+                            <option value="">所有大類</option>
+                        </select>
                         <select id="inv-filter-status" class="form-control">
                             <option value="">所有狀態</option>
                             <option value="正常">正常</option>
@@ -1277,6 +1274,10 @@
                             <option value="未知">未知</option>
                             <option value="待報廢">待報廢</option>
                         </select>
+                        <div style="position: relative; display: flex; align-items: center;">
+                            <input type="text" id="inv-search" class="form-control" placeholder="搜尋唯一編號/品牌/儲位..." style="padding-left: 36px;">
+                            <i data-lucide="search" style="position: absolute; left: 12px; color: var(--text-muted); width: 16px; height: 16px;"></i>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table id="inv-table">
@@ -1330,21 +1331,13 @@
                             <div id="tx-lookup-detail" style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.7;"></div>
                         </div>
 
-                        <!-- 第三區塊：設備大類選擇器 + 動態子欄位 -->
-                        <div class="form-row" id="tx-category-row">
-                            <div class="form-group" style="grid-column: span 2;">
-                                <label>設備大類 *</label>
-                                <select id="tx-category" class="form-control" required>
-                                    <option value="">請選擇設備大類...</option>
-                                    <!-- 由 buildDropdowns() 動態填入 -->
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row" id="tx-dynamic-fields" style="grid-column: span 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; width: 100%;">
-                            <!-- 由 renderTransactionFormFields() 根據所選大類動態生成子屬性欄位 -->
-                        </div>
+                        <!-- 第三區塊：入庫目標位置，掃描儲位後自動帶入樓層/層架/儲位 -->
                         <div class="form-row" id="tx-in-location-row">
                             <input type="hidden" id="tx-qty" value="1">
+                            <div class="form-group">
+                                <label>掃描儲位</label>
+                                <button type="button" class="btn btn-outline" id="btn-scan-loc" style="width: 100%; min-height: 42px;"><i data-lucide="scan"></i> 掃描儲位條碼</button>
+                            </div>
                             <div class="form-group">
                                 <label>目標樓層 *</label>
                                 <select id="tx-floor" class="form-control" required>
@@ -1359,14 +1352,25 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label id="tx-loc-label" style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>目標儲位 *</span>
-                                    <button type="button" class="btn btn-outline" id="btn-scan-loc" style="padding: 2px 8px; font-size: 0.75rem; height: 22px;"><i data-lucide="scan" style="width:12px; height:12px;"></i> 掃描</button>
-                                </label>
+                                <label id="tx-loc-label">目標儲位 *</label>
                                 <select id="tx-loc" class="form-control" required>
                                     <option value="">請選擇儲位...</option>
                                 </select>
                             </div>
+                        </div>
+
+                        <!-- 第四區塊：設備大類選擇器 + 動態子欄位 -->
+                        <div class="form-row" id="tx-category-row">
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label>設備大類 *</label>
+                                <select id="tx-category" class="form-control" required>
+                                    <option value="">請選擇設備大類...</option>
+                                    <!-- 由 buildDropdowns() 動態填入 -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row" id="tx-dynamic-fields" style="grid-column: span 2; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; width: 100%;">
+                            <!-- 由 renderTransactionFormFields() 根據所選大類動態生成子屬性欄位 -->
                         </div>
 
                         <!-- 移位使用之新目標儲位連動列 -->
@@ -1391,7 +1395,7 @@
                             </div>
                         </div>
 
-                        <!-- 第五列：設備庫存狀態、操作人員、備註 -->
+                        <!-- 最後列：設備庫存狀態、操作人員、備註 -->
                         <div class="form-row">
                             <div class="form-group" id="tx-status-group">
                                 <label>設備庫存狀態</label>
@@ -1423,6 +1427,7 @@
                 <div class="panel">
                     <h3><i data-lucide="clipboard-check"></i> 即時雲端盤點對帳</h3>
                     <div class="form-row" style="align-items: flex-end; margin-top: 15px;">
+                        <button type="button" class="btn btn-outline" id="btn-scan-st-loc" style="height: 42px;"><i data-lucide="scan"></i> 掃描儲位</button>
                         <div class="form-group" style="margin-bottom: 0;"><label>盤點樓層</label><select id="st-floor" class="form-control"><option value="ALL" selected>全部樓層</option><option value="B1">B1</option><option value="1F">1F</option></select></div>
                         <div class="form-group" style="margin-bottom: 0;"><label>盤點層架</label><select id="st-shelf" class="form-control"><option value="ALL">全部層架</option></select></div>
                         <div class="form-group" style="margin-bottom: 0;"><label>盤點儲位</label><select id="st-loc" class="form-control"><option value="ALL">全部儲位</option></select></div>
@@ -1587,13 +1592,13 @@
                     <h3><i data-lucide="git-branch"></i> 程式碼版本</h3>
                     <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <div>
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.5</div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.6</div>
                             <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.85rem;">更新日期：2026-07-01</div>
                         </div>
                         <span class="status-badge bg-normal">目前版本</span>
                     </div>
                     <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
-                        本版新增設備庫存狀態「未知」，並同步到入庫、庫存篩選、盤點狀態異動與儀表板未知狀態設備存量。
+                        本版新增庫存明細與盤點儲位掃描，調整入庫作業欄位順序，並讓出庫/移位掃描物品編號後自動查詢資料庫。
                     </p>
                 </div>
 
@@ -2401,6 +2406,66 @@
             selectEl.innerHTML = html;
             if (currentValue && locations.some(l => l.id === currentValue)) selectEl.value = currentValue;
             else selectEl.value = allLabel ? 'ALL' : '';
+        }
+
+        function getLocationPartsFromBarcode(code) {
+            const direct = cache.locations.find(l => l.id === code);
+            if (direct) return [direct.floor, direct.shelf, direct.layer];
+            const parts = String(code || '').split('-');
+            if (parts.length >= 2 && (parts[0] === '1F' || parts[0] === 'B1')) return parts;
+            return [];
+        }
+
+        function applyLocationScanToInventory(code) {
+            const parts = getLocationPartsFromBarcode(code);
+            if (parts.length < 2) return false;
+
+            const floorEl = document.getElementById('inv-filter-floor');
+            const shelfEl = document.getElementById('inv-filter-shelf');
+            const locEl = document.getElementById('inv-filter-loc');
+            if (!floorEl || !shelfEl || !locEl) return false;
+
+            floorEl.value = parts[0];
+            syncInventoryFilters('floor');
+            shelfEl.value = parts[1];
+            syncInventoryFilters('shelf');
+            if (parts.length >= 3) {
+                const loc = cache.locations.find(l => l.id === code) ? code : `${parts[0]}-${parts[1]}-${parts[2]}`;
+                locEl.value = loc;
+                syncInventoryFilters('loc');
+            }
+            syncStatusFilter();
+            renderInventory();
+            return true;
+        }
+
+        function applyLocationScanToStocktake(code) {
+            const parts = getLocationPartsFromBarcode(code);
+            if (parts.length < 2) return false;
+
+            const floorEl = document.getElementById('st-floor');
+            const shelfEl = document.getElementById('st-shelf');
+            const locEl = document.getElementById('st-loc');
+            if (!floorEl || !shelfEl || !locEl) return false;
+
+            floorEl.dataset.userSelected = 'true';
+            shelfEl.dataset.userSelected = 'true';
+            locEl.dataset.userSelected = 'true';
+            floorEl.value = parts[0];
+            syncShelfFilters('st');
+            shelfEl.value = parts[1];
+            syncShelfFilters('st');
+            if (parts.length >= 3) {
+                const loc = cache.locations.find(l => l.id === code) ? code : `${parts[0]}-${parts[1]}-${parts[2]}`;
+                locEl.value = loc;
+            }
+            generateStocktakeList();
+            return true;
+        }
+
+        function maybeAutoQueryScannedAsset() {
+            const type = document.getElementById('tx-type')?.value;
+            if (type === 'out' || type === 'move') queryTransactionAsset();
         }
 
         function syncInventoryFilters(triggerSource) {
@@ -3988,7 +4053,15 @@
 
             // 如果有指定填寫的 input 欄位
             if (window.scannerTargetField) {
-                if (window.scannerTargetField === 'tx-loc' || window.scannerTargetField === 'tx-new-loc') {
+                if (window.scannerTargetField === 'inv-loc') {
+                    if (!applyLocationScanToInventory(decodedText)) {
+                        showToast("掃描內容不是有效儲位條碼。", "warning");
+                    }
+                } else if (window.scannerTargetField === 'st-loc') {
+                    if (!applyLocationScanToStocktake(decodedText)) {
+                        showToast("掃描內容不是有效儲位條碼。", "warning");
+                    }
+                } else if (window.scannerTargetField === 'tx-loc' || window.scannerTargetField === 'tx-new-loc') {
                     const prefix = window.scannerTargetField === 'tx-new-loc' ? 'new-' : '';
                     const floorEl = document.getElementById(`tx-${prefix}floor`);
                     const shelfEl = document.getElementById(`tx-${prefix}shelf`);
@@ -4017,6 +4090,7 @@
                     if (el) {
                         el.value = decodedText;
                         el.dispatchEvent(new Event('blur')); // 觸發自動查詢
+                        if (window.scannerTargetField === 'tx-asset-id') maybeAutoQueryScannedAsset();
                     }
                 }
                 return;
@@ -4071,12 +4145,15 @@
                     }
                 } else {
                     switchPage('inventory', document.getElementById('menu-inventory'));
-                    document.getElementById('inv-search').value = decodedText;
-                    renderInventory();
+                    if (!applyLocationScanToInventory(decodedText)) {
+                        document.getElementById('inv-search').value = decodedText;
+                        renderInventory();
+                    }
                 }
             } else if (isMaterial) {
                 if (currentPage === 'transactions') {
                     document.getElementById('tx-asset-id').value = decodedText;
+                    maybeAutoQueryScannedAsset();
                 } else if (currentPage === 'stocktake' && currentStocktakeData.length > 0) {
                     const idx = currentStocktakeData.findIndex(d => d.assetId === decodedText || d.itemId === decodedText);
                     if (idx !== -1) {
@@ -4102,6 +4179,7 @@
                 // 未知格式直接帶入快速搜尋或當前頁面主要料號欄位
                 if (currentPage === 'transactions') {
                     document.getElementById('tx-asset-id').value = decodedText;
+                    maybeAutoQueryScannedAsset();
                 } else {
                     document.getElementById('quick-search').value = decodedText;
                     switchPage('inventory', document.getElementById('menu-inventory'));
@@ -4502,6 +4580,8 @@
             // 庫存篩選與搜尋
             if (document.getElementById('tx-category')) document.getElementById('tx-category').addEventListener('change', renderTransactionFormFields);
             if (document.getElementById('inv-filter-category')) document.getElementById('inv-filter-category').addEventListener('change', renderInventory);
+            const scanInvLocBtn = document.getElementById('btn-scan-inv-loc');
+            if (scanInvLocBtn) scanInvLocBtn.addEventListener('click', () => openScanner('inv-loc'));
             document.getElementById('inv-search').addEventListener('keyup', renderInventory); 
             document.getElementById('inv-filter-status').addEventListener('change', renderInventory); 
             document.getElementById('inv-filter-floor').addEventListener('change', () => {
@@ -4535,6 +4615,8 @@
             document.getElementById('st-loc').addEventListener('change', () => {
                 document.getElementById('st-loc').dataset.userSelected = 'true';
             });
+            const scanStLocBtn = document.getElementById('btn-scan-st-loc');
+            if (scanStLocBtn) scanStLocBtn.addEventListener('click', () => openScanner('st-loc'));
 
             // 操作人員姓名跨頁面與手機/電腦模式即時同步
             const syncUserInputs = (e) => {
