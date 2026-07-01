@@ -1587,13 +1587,13 @@
                     <h3><i data-lucide="git-branch"></i> 程式碼版本</h3>
                     <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <div>
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.2</div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.3</div>
                             <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.85rem;">更新日期：2026-07-01</div>
                         </div>
                         <span class="status-badge bg-normal">目前版本</span>
                     </div>
                     <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
-                        本版修正系統設定與備份頁面的排序，固定顯示為程式碼版本、Firebase 雲端資料庫設定、本地 JSON 冷備份，並保留樓層/層架/儲位階層連動與 Firebase 設定收合。
+                        本版修正儀表板指標名稱與儲位顯示順序，空儲位優先顯示，並保留系統設定與備份頁面的正確排序。
                     </p>
                 </div>
 
@@ -2709,12 +2709,12 @@
             document.getElementById('dash-cards').innerHTML = `
                 <div class="card primary">
                     <i data-lucide="map-pin" class="card-icon"></i>
-                    <h3>總儲位數 / 空儲位</h3>
-                    <p>${totalLocs} <span style="font-size: 1rem; color: var(--text-muted);">/ ${totalLocs - usedLocs}</span></p>
+                    <h3>空儲位 / 總儲位數</h3>
+                    <p>${totalLocs - usedLocs} <span style="font-size: 1rem; color: var(--text-muted);">/ ${totalLocs}</span></p>
                 </div>
                 <div class="card success">
                     <i data-lucide="box" class="card-icon"></i>
-                    <h3>在庫唯一設備數</h3>
+                    <h3>在庫設備總數</h3>
                     <p>${uniqueAssetsCount}</p>
                 </div>
                 <div class="card success">
