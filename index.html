@@ -222,6 +222,19 @@
             animation: fadeIn 0.25s ease-out;
         }
 
+        #data.page.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #app-version-panel {
+            order: 0;
+        }
+
+        #firebase-settings-panel {
+            order: 1;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
@@ -975,6 +988,19 @@
             #data .dashboard-cards {
                 grid-template-columns: 1fr !important;
             }
+
+            #data.page.active {
+                display: flex;
+                flex-direction: column;
+            }
+
+            #app-version-panel {
+                order: 0;
+            }
+
+            #firebase-settings-panel {
+                order: 1;
+            }
             
             .btn-group {
                 width: 100%;
@@ -1262,6 +1288,9 @@
                             <option value="B1">B1</option>
                             <option value="1F">1F</option>
                         </select>
+                        <select id="inv-filter-shelf" class="form-control">
+                            <option value="">所有層架</option>
+                        </select>
                         <select id="inv-filter-loc" class="form-control">
                             <option value="">所有儲位</option>
                         </select>
@@ -1347,8 +1376,14 @@
                             <div class="form-group">
                                 <label>目標樓層 *</label>
                                 <select id="tx-floor" class="form-control" required>
-                                    <option value="1F">1F 一樓</option>
-                                    <option value="B1">B1 地下室</option>
+                                    <option value="1F">1F</option>
+                                    <option value="B1">B1</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>目標層架 *</label>
+                                <select id="tx-shelf" class="form-control" required>
+                                    <option value="">請選擇層架...</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1367,8 +1402,8 @@
                             <div class="form-group">
                                 <label>新目標樓層 *</label>
                                 <select id="tx-new-floor" class="form-control">
-                                    <option value="1F">1F 一樓</option>
-                                    <option value="B1">B1 地下室</option>
+                                    <option value="1F">1F</option>
+                                    <option value="B1">B1</option>
                                 </select>
                             </div>
                             <div class="form-group" style="grid-column: span 2;">
@@ -1417,6 +1452,7 @@
                     <div class="form-row" style="align-items: flex-end; margin-top: 15px;">
                         <div class="form-group" style="margin-bottom: 0;"><label>盤點樓層</label><select id="st-floor" class="form-control"><option value="ALL" selected>全部樓層</option><option value="B1">B1</option><option value="1F">1F</option></select></div>
                         <div class="form-group" style="margin-bottom: 0;"><label>盤點層架</label><select id="st-shelf" class="form-control"><option value="ALL">全部層架</option></select></div>
+                        <div class="form-group" style="margin-bottom: 0;"><label>盤點儲位</label><select id="st-loc" class="form-control"><option value="ALL">全部儲位</option></select></div>
                         <button class="btn" id="btn-load-st" style="height: 42px;"><i data-lucide="download"></i> 載入雲端實盤清單</button>
                     </div>
                 </div>
@@ -1572,12 +1608,29 @@
 
             <!-- 8. 資料與 Firebase 設定頁面 -->
             <div id="data" class="page">
-                <!-- 8-1. 自訂 Firebase 設定區塊 -->
-                <div class="panel">
+                <!-- 8-1. 程式碼版本 -->
+                <div class="panel" id="app-version-panel">
+                    <h3><i data-lucide="git-branch"></i> 程式碼版本</h3>
+                    <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.1</div>
+                            <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.85rem;">更新日期：2026-07-01</div>
+                        </div>
+                        <span class="status-badge bg-normal">目前版本</span>
+                    </div>
+                    <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
+                        本版包含唯一資產管理、入庫/出庫/移位、盤點刪除/狀態異動、雲端 timeout、台灣時間、手機版版面調整、盤點預設全部樓層，以及樓層/層架/儲位階層連動與 Firebase 設定收合。
+                    </p>
+                </div>
+
+                <!-- 8-2. 自訂 Firebase 設定區塊 -->
+                <div class="panel" id="firebase-settings-panel">
                     <h3><i data-lucide="cloud"></i> Firebase 雲端資料庫設定</h3>
                     <p style="margin-bottom: 15px; font-size: 0.85rem; color: var(--text-muted);">
                         您可以在此修改網頁對接的 Firebase Firestore。若留空或清除設定，將預設連線至系統內建的專案庫。
                     </p>
+                    <details id="fb-settings-details">
+                        <summary class="btn btn-outline" style="width: fit-content; margin-bottom: 15px;"><i data-lucide="settings"></i> 展開 Firebase 設定</summary>
                     <div class="form-row">
                         <div class="form-group"><label>API Key (apiKey)</label><input type="text" id="fb-api-key" class="form-control"></div>
                         <div class="form-group"><label>Auth Domain (authDomain)</label><input type="text" id="fb-auth-domain" class="form-control"></div>
@@ -1594,20 +1647,7 @@
                         <button class="btn btn-success" id="btn-save-fb"><i data-lucide="save"></i> 儲存自訂設定並重新整理</button>
                         <button class="btn btn-outline" id="btn-reset-fb"><i data-lucide="rotate-ccw"></i> 還原為系統預設</button>
                     </div>
-                </div>
-                
-                <div class="panel">
-                    <h3><i data-lucide="git-branch"></i> 程式碼版本</h3>
-                    <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <div>
-                            <div style="font-size: 1.8rem; font-weight: 700; color: var(--text-main); line-height: 1;">v0.7.0</div>
-                            <div style="margin-top: 6px; color: var(--text-muted); font-size: 0.85rem;">更新日期：2026-07-01</div>
-                        </div>
-                        <span class="status-badge bg-normal">目前版本</span>
-                    </div>
-                    <p style="margin: 14px 0 0 0; font-size: 0.85rem; color: var(--text-muted); line-height: 1.7;">
-                        本版包含唯一資產管理、入庫/出庫/移位、盤點刪除/狀態異動、雲端 timeout、台灣時間、手機版版面調整與盤點預設全部樓層。
-                    </p>
+                    </details>
                 </div>
 
                 <div class="panel">
@@ -2357,6 +2397,89 @@
             locEl.value = loc ? loc.id : '';
         }
 
+        function getShelfOptionsForFloor(floor) {
+            return [...new Set(cache.locations
+                .filter(l => !floor || floor === 'ALL' || l.floor === floor)
+                .map(l => l.shelf))]
+                .filter(Boolean)
+                .sort();
+        }
+
+        function getLocationOptionsForHierarchy(floor, shelf) {
+            return cache.locations
+                .filter(l => (!floor || floor === 'ALL' || l.floor === floor) && (!shelf || shelf === 'ALL' || l.shelf === shelf))
+                .sort((a, b) => a.id.localeCompare(b.id));
+        }
+
+        function fillShelfSelect(selectEl, floor, allLabel, emptyLabel, currentValue = '') {
+            if (!selectEl) return;
+            const shelves = getShelfOptionsForFloor(floor);
+            let html = `<option value="${allLabel ? 'ALL' : ''}">${allLabel || emptyLabel}</option>`;
+            shelves.forEach(s => html += `<option value="${s}">${s}</option>`);
+            selectEl.innerHTML = html;
+            if (currentValue && shelves.includes(currentValue)) selectEl.value = currentValue;
+            else selectEl.value = allLabel ? 'ALL' : '';
+        }
+
+        function fillLocationSelect(selectEl, floor, shelf, allLabel, emptyLabel, currentValue = '') {
+            if (!selectEl) return;
+            const locations = getLocationOptionsForHierarchy(floor, shelf);
+            let html = `<option value="${allLabel ? 'ALL' : ''}">${allLabel || emptyLabel}</option>`;
+            locations.forEach(l => html += `<option value="${l.id}">${l.id}</option>`);
+            selectEl.innerHTML = html;
+            if (currentValue && locations.some(l => l.id === currentValue)) selectEl.value = currentValue;
+            else selectEl.value = allLabel ? 'ALL' : '';
+        }
+
+        function syncInventoryFilters(triggerSource) {
+            const floorEl = document.getElementById('inv-filter-floor');
+            const shelfEl = document.getElementById('inv-filter-shelf');
+            const locEl = document.getElementById('inv-filter-loc');
+            if (!floorEl || !shelfEl || !locEl) return;
+
+            let floor = floorEl.value;
+            let shelf = shelfEl.value;
+            let loc = locEl.value;
+
+            if (triggerSource === 'loc' && loc) {
+                const found = cache.locations.find(l => l.id === loc);
+                if (found) {
+                    floorEl.value = found.floor;
+                    floor = found.floor;
+                    shelf = found.shelf;
+                }
+            }
+
+            fillShelfSelect(shelfEl, floor, '', '所有層架', shelf);
+            if (triggerSource === 'floor' && shelf && !getShelfOptionsForFloor(floor).includes(shelf)) shelf = '';
+            if (triggerSource === 'loc' && shelf) shelfEl.value = shelf;
+            fillLocationSelect(locEl, floor, shelfEl.value, '', '所有儲位', loc);
+        }
+
+        function syncShelfFilters(prefix) {
+            const floorEl = document.getElementById(`${prefix}-floor`);
+            const shelfEl = document.getElementById(`${prefix}-shelf`);
+            const locEl = document.getElementById(`${prefix}-loc`);
+            if (!floorEl || !shelfEl) return;
+
+            const floor = floorEl.value;
+            const currentShelf = shelfEl.value;
+            const currentLoc = locEl ? locEl.value : '';
+            fillShelfSelect(shelfEl, floor, '全部層架', '', currentShelf);
+            if (locEl) fillLocationSelect(locEl, floor, shelfEl.value, '全部儲位', '', currentLoc);
+        }
+
+        function syncTxLocationOptions(prefix) {
+            const floorEl = document.getElementById(`tx-${prefix}floor`);
+            const shelfEl = document.getElementById(`tx-${prefix}shelf`);
+            const locEl = document.getElementById(`tx-${prefix}loc`);
+            if (!floorEl || !locEl) return;
+            const floor = floorEl.value;
+            const shelf = shelfEl ? shelfEl.value : '';
+            if (shelfEl) fillShelfSelect(shelfEl, floor, '', '請選擇層架...', shelf);
+            fillLocationSelect(locEl, floor, shelfEl ? shelfEl.value : '', '', prefix === 'new-' ? '請選擇新儲位...' : '請選擇儲位...', locEl.value);
+        }
+
         function describeAsset(inv) {
             if (!inv) return '';
             const attrs = inv.attributes || {};
@@ -2443,8 +2566,10 @@
             syncLocationFilters();
             const stFloorEl = document.getElementById('st-floor');
             const stShelfEl = document.getElementById('st-shelf');
+            const stLocEl = document.getElementById('st-loc');
             if (stFloorEl && !stFloorEl.dataset.userSelected) stFloorEl.value = 'ALL';
             if (stShelfEl && !stShelfEl.dataset.userSelected) stShelfEl.value = 'ALL';
+            if (stLocEl && !stLocEl.dataset.userSelected) stLocEl.value = 'ALL';
             syncShelfFilters('st');
             renderTransactionFormFields();
 
@@ -2470,6 +2595,8 @@
             setVal('tx-category', lastCache.category);
             renderTransactionFormFields();
             setVal('tx-floor', lastCache.floor);
+            syncTxLocationOptions('');
+            setVal('tx-shelf', lastCache.shelf);
             syncTxLocationOptions('');
             setVal('tx-loc', lastCache.locationId);
             setVal('tx-new-floor', lastCache.newFloor);
@@ -2797,6 +2924,34 @@
                     }
                 }
             }
+        }
+
+        function syncInventoryFilters(triggerSource) {
+            const floorEl = document.getElementById('inv-filter-floor');
+            const shelfEl = document.getElementById('inv-filter-shelf');
+            const locEl = document.getElementById('inv-filter-loc');
+            if (!floorEl || !shelfEl || !locEl) return;
+
+            let floor = floorEl.value;
+            let shelf = shelfEl.value;
+            let loc = locEl.value;
+
+            if (triggerSource === 'loc' && loc) {
+                const found = cache.locations.find(l => l.id === loc);
+                if (found) {
+                    floorEl.value = found.floor;
+                    floor = found.floor;
+                    shelf = found.shelf;
+                }
+            }
+
+            fillShelfSelect(shelfEl, floor, '', '所有層架', shelf);
+            if (triggerSource === 'floor' && shelf && !getShelfOptionsForFloor(floor).includes(shelf)) {
+                shelfEl.value = '';
+            }
+            if (triggerSource === 'loc' && shelf) shelfEl.value = shelf;
+
+            fillLocationSelect(locEl, floor, shelfEl.value, '', '所有儲位', loc);
         }
 
         async function runGenerateLocations(mode) {
@@ -3279,6 +3434,7 @@
             const q = document.getElementById('inv-search').value.toLowerCase(); 
             const stat = document.getElementById('inv-filter-status').value; 
             const floor = document.getElementById('inv-filter-floor').value;
+            const filterShelf = document.getElementById('inv-filter-shelf')?.value || '';
             const filterLoc = document.getElementById('inv-filter-loc').value; // 儲位篩選
             const filterCat = document.getElementById('inv-filter-category')?.value || ''; // 大類篩選
             
@@ -3318,6 +3474,7 @@
                 
                 if(stat && inv.status !== stat) return; 
                 if(floor && locParts[0] !== floor) return;
+                if(filterShelf && locParts[1] !== filterShelf) return;
                 if(filterLoc && inv.locationId !== filterLoc) return; // 儲位匹配
                 
                 // 大類篩選匹配
@@ -3510,6 +3667,7 @@
                     category: txCategory,
                     attributes: dynPayload.attributes,
                     floor: document.getElementById('tx-floor').value,
+                    shelf: document.getElementById('tx-shelf')?.value || '',
                     locationId: loc,
                     newFloor: document.getElementById('tx-new-floor').value,
                     newShelf: document.getElementById('tx-new-shelf').value,
@@ -3543,11 +3701,13 @@
         function generateStocktakeList() {
             const floor = document.getElementById('st-floor').value; 
             const shelf = document.getElementById('st-shelf').value;
+            const loc = document.getElementById('st-loc')?.value || 'ALL';
             
             currentStocktakeData = cache.inventory.filter(inv => { 
                 const parts = inv.locationId.split('-'); 
                 if(floor !== 'ALL' && parts[0] !== floor) return false; 
                 if(shelf !== 'ALL' && parts[1] !== shelf) return false; 
+                if(loc !== 'ALL' && inv.locationId !== loc) return false;
                 return true; 
             }).map(inv => { 
                 let descParts = [];
@@ -3845,12 +4005,23 @@
                 if (window.scannerTargetField === 'tx-loc' || window.scannerTargetField === 'tx-new-loc') {
                     const prefix = window.scannerTargetField === 'tx-new-loc' ? 'new-' : '';
                     const floorEl = document.getElementById(`tx-${prefix}floor`);
+                    const shelfEl = document.getElementById(`tx-${prefix}shelf`);
                     const locEl = document.getElementById(`tx-${prefix}loc`);
                     if (floorEl && locEl) {
                         const parts = decodedText.split('-');
                         if (parts.length > 0 && (parts[0] === '1F' || parts[0] === 'B1')) {
                             floorEl.value = parts[0];
-                            syncTxLocationOptions(prefix);
+                            if (prefix === 'new-') {
+                                syncTxMoveShelfOptions();
+                                if (parts.length >= 2 && shelfEl) shelfEl.value = parts[1];
+                                syncTxMoveLayerOptions();
+                                if (parts.length >= 3) document.getElementById('tx-new-layer').value = parts[2];
+                                syncTxMoveTargetLocation();
+                            } else {
+                                syncTxLocationOptions(prefix);
+                                if (parts.length >= 2 && shelfEl) shelfEl.value = parts[1];
+                                syncTxLocationOptions(prefix);
+                            }
                         }
                         locEl.value = decodedText;
                         locEl.dispatchEvent(new Event('change'));
@@ -3874,8 +4045,11 @@
                     const type = document.getElementById('tx-type').value;
                     if (type === 'move') {
                         if (!document.getElementById('tx-loc').value) {
-                            const floor = decodedText.split('-')[0];
+                            const parts = decodedText.split('-');
+                            const floor = parts[0];
                             document.getElementById('tx-floor').value = floor;
+                            syncTxLocationOptions('');
+                            if (parts.length >= 2) document.getElementById('tx-shelf').value = parts[1];
                             syncTxLocationOptions('');
                             document.getElementById('tx-loc').value = decodedText;
                         } else {
@@ -3891,8 +4065,11 @@
                             }
                         }
                     } else {
-                        const floor = decodedText.split('-')[0];
+                        const parts = decodedText.split('-');
+                        const floor = parts[0];
                         document.getElementById('tx-floor').value = floor;
+                        syncTxLocationOptions('');
+                        if (parts.length >= 2) document.getElementById('tx-shelf').value = parts[1];
                         syncTxLocationOptions('');
                         document.getElementById('tx-loc').value = decodedText;
                     }
@@ -3900,7 +4077,10 @@
                     const parts = decodedText.split('-');
                     if (parts.length >= 2) {
                         document.getElementById('st-floor').value = parts[0];
+                        syncShelfFilters('st');
                         document.getElementById('st-shelf').value = parts[1];
+                        syncShelfFilters('st');
+                        if (parts.length >= 3) document.getElementById('st-loc').value = decodedText;
                         generateStocktakeList();
                     }
                 } else {
@@ -4284,6 +4464,7 @@
 
             // 交易表單樓層與儲位連動
             document.getElementById('tx-floor').addEventListener('change', () => syncTxLocationOptions(''));
+            document.getElementById('tx-shelf').addEventListener('change', () => syncTxLocationOptions(''));
             document.getElementById('tx-new-floor').addEventListener('change', syncTxMoveShelfOptions);
             document.getElementById('tx-new-shelf').addEventListener('change', syncTxMoveLayerOptions);
             document.getElementById('tx-new-layer').addEventListener('change', syncTxMoveTargetLocation);
@@ -4342,6 +4523,11 @@
                 syncStatusFilter();
                 renderInventory();
             });
+            document.getElementById('inv-filter-shelf').addEventListener('change', () => {
+                syncInventoryFilters('shelf');
+                syncStatusFilter();
+                renderInventory();
+            });
             document.getElementById('inv-filter-loc').addEventListener('change', () => {
                 syncInventoryFilters('loc');
                 syncStatusFilter();
@@ -4352,10 +4538,16 @@
             document.getElementById('st-floor').addEventListener('change', () => {
                 document.getElementById('st-floor').dataset.userSelected = 'true';
                 document.getElementById('st-shelf').dataset.userSelected = 'true';
+                document.getElementById('st-loc').dataset.userSelected = 'true';
                 syncShelfFilters('st');
             });
             document.getElementById('st-shelf').addEventListener('change', () => {
                 document.getElementById('st-shelf').dataset.userSelected = 'true';
+                document.getElementById('st-loc').dataset.userSelected = 'true';
+                syncShelfFilters('st');
+            });
+            document.getElementById('st-loc').addEventListener('change', () => {
+                document.getElementById('st-loc').dataset.userSelected = 'true';
             });
 
             // 操作人員姓名跨頁面與手機/電腦模式即時同步
